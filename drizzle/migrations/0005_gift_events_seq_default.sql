@@ -1,0 +1,1 @@
+ALTER TABLE public.gift_case_events ALTER COLUMN seq SET DEFAULT 0;

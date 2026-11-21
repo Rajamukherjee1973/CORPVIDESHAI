@@ -1,0 +1,348 @@
+{
+  "scope": "Selected deterministic POC service and budget tests; not production certification",
+  "measuredAt": "2026-10-26T12:25:59.869287+00:00",
+  "success": true,
+  "tests": {
+    "total": 66,
+    "passed": 66,
+    "failed": 0
+  },
+  "suites": [
+    {
+      "name": "src/tests/agent-integration.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "server integration boundaries never permits official filing or ledger mutation without an integration",
+          "status": "passed"
+        },
+        {
+          "name": "server integration boundaries requires a verified identity for private records",
+          "status": "passed"
+        },
+        {
+          "name": "server integration boundaries fails closed on malformed QA and missing filing packets",
+          "status": "passed"
+        },
+        {
+          "name": "server integration boundaries only replays completed non-tool outcomes into bounded context",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/corporate-access.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "Corporate filing scope allows an assigned company",
+          "status": "passed"
+        },
+        {
+          "name": "Corporate filing scope denies another company",
+          "status": "passed"
+        },
+        {
+          "name": "Corporate filing scope denies unassigned accounts",
+          "status": "passed"
+        },
+        {
+          "name": "Corporate filing scope keeps recorded filings labelled as simulations",
+          "status": "passed"
+        },
+        {
+          "name": "Corporate filing scope flags estimated past deadlines without declaring a violation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/currency-outlook.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "live-rate currency outlook prices the outlook from its supplied INR-per-unit snapshot",
+          "status": "passed"
+        },
+        {
+          "name": "live-rate currency outlook prevents allocation to a currency without supported OPI coverage",
+          "status": "passed"
+        },
+        {
+          "name": "live-rate currency outlook a fully hedged simplified scenario offsets currency translation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/feasibility.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "resource allocation calculations multiplies quantity, monthly rate and duration before adding contingency",
+          "status": "passed"
+        },
+        {
+          "name": "resource allocation calculations totals the illustrative six-month staffing and tool plan",
+          "status": "passed"
+        },
+        {
+          "name": "resource allocation calculations rejects invalid values instead of reporting a misleading budget",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/filing-service.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "shared filing persistence corporate and regulator paths use the same owner-stamped append-only source snapshot",
+          "status": "passed"
+        },
+        {
+          "name": "shared filing persistence corporate access denial occurs before reading releases or writing records",
+          "status": "passed"
+        },
+        {
+          "name": "shared filing persistence both entrypoints fail visibly on rejected storage writes without replay",
+          "status": "passed"
+        },
+        {
+          "name": "shared filing persistence distinguishes a portal access-query outage from a definitive denial",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/filing-submissions.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "Form FC simulation submissions records filed date and officer details as simulation only",
+          "status": "passed"
+        },
+        {
+          "name": "Form FC simulation submissions rejects non-regulator demonstration desks",
+          "status": "passed"
+        },
+        {
+          "name": "Form FC simulation submissions scopes status to the company and reporting month",
+          "status": "passed"
+        },
+        {
+          "name": "Form FC simulation submissions retains history and uses the newest dated entry",
+          "status": "passed"
+        },
+        {
+          "name": "Form FC simulation submissions rejects impossible and future dates",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/filings.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "filings Form FC due 30 days after the reporting month ends",
+          "status": "passed"
+        },
+        {
+          "name": "filings APR due 31 December",
+          "status": "passed"
+        },
+        {
+          "name": "filings one Form FC per funded part plus APR",
+          "status": "passed"
+        },
+        {
+          "name": "filings groups rows by company",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/frontier.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "frontier ODI ceiling is 400% of net worth",
+          "status": "passed"
+        },
+        {
+          "name": "frontier OPI ceiling is 50% of net worth",
+          "status": "passed"
+        },
+        {
+          "name": "frontier sanctioned destination is blocked",
+          "status": "passed"
+        },
+        {
+          "name": "frontier breaching the ceiling defers",
+          "status": "passed"
+        },
+        {
+          "name": "frontier full hedge removes FX cost",
+          "status": "passed"
+        },
+        {
+          "name": "frontier shared beneficiary plus high utilisation is critical",
+          "status": "passed"
+        },
+        {
+          "name": "rbi radar small plain flow is Watch",
+          "status": "passed"
+        },
+        {
+          "name": "rbi radar party over USD 1bn in month plus large guarantee ticket is Critical",
+          "status": "passed"
+        },
+        {
+          "name": "rbi radar entity funded by 3 Indian parties in Mauritius is Elevated",
+          "status": "passed"
+        },
+        {
+          "name": "rbi radar USD 10m at 95 is \u20b995 crore",
+          "status": "passed"
+        },
+        {
+          "name": "rbi auto-load parsing finds the newest release on RBI's list",
+          "status": "passed"
+        },
+        {
+          "name": "rbi auto-load parsing finds the OFDI spreadsheet link",
+          "status": "passed"
+        },
+        {
+          "name": "rbi auto-load parsing treats a bot-check HTML page as blocked",
+          "status": "passed"
+        },
+        {
+          "name": "rbi auto-load parsing counts parties sharing one overseas entity",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/fx.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "fx cross rates returns 1:1 legs against the table base",
+          "status": "passed"
+        },
+        {
+          "name": "fx cross rates computes a non-USD cross",
+          "status": "passed"
+        },
+        {
+          "name": "fx cross rates returns null when a leg is missing or invalid",
+          "status": "passed"
+        },
+        {
+          "name": "fx cross rates formats to the conventional precision",
+          "status": "passed"
+        },
+        {
+          "name": "fx tick direction flags up, down and flat",
+          "status": "passed"
+        },
+        {
+          "name": "fx tick direction renders a signed percentage move",
+          "status": "passed"
+        },
+        {
+          "name": "fx venues exposes distinct London and India tapes",
+          "status": "passed"
+        },
+        {
+          "name": "fx venues knows the trading windows",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/legal-service.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "Conservative overseas investment route service calculates the general ODI 400% ceiling and includes existing commitments",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service requires prior-approval review above the general ODI ceiling",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service calculates the general OPI 50% ceiling without silently waiving it",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service does not treat an unlisted investor as freely eligible for OPI",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service holds a prohibited gambling activity",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service distinguishes INR denomination from dealing in INR-linked products",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service holds a required missing NOC rather than inventing approval",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service holds incomplete evidence",
+          "status": "passed"
+        },
+        {
+          "name": "Conservative overseas investment route service rejects negative exposure at the service boundary",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/service-runtime.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "backend execution reliability records exactly one accepted outcome and returns the original result",
+          "status": "passed"
+        },
+        {
+          "name": "backend execution reliability never reruns model work or writes a misleading failed-model record when success persistence fails",
+          "status": "passed"
+        },
+        {
+          "name": "backend execution reliability preserves work failure and makes failure-audit loss explicit",
+          "status": "passed"
+        },
+        {
+          "name": "backend execution reliability keeps rejected QA outcomes rejected",
+          "status": "passed"
+        },
+        {
+          "name": "backend execution reliability adds a no-store correlation header without logging payloads",
+          "status": "passed"
+        },
+        {
+          "name": "backend execution reliability preserves error identity and does not retry failed operations",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "src/tests/treasury-investments.test.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "name": "provides over 200 distinct ODI / OPI investment scenarios",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

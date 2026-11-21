@@ -1,0 +1,10 @@
+ALTER TABLE public.gift_portal_roles ADD COLUMN public_demo boolean NOT NULL DEFAULT false;
+CREATE OR REPLACE FUNCTION public.is_public_gift_demo(_uid uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$ SELECT COALESCE((SELECT public_demo FROM public.gift_portal_roles WHERE user_id=_uid),false) $$;
+REVOKE ALL ON FUNCTION public.is_public_gift_demo(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_public_gift_demo(uuid) TO authenticated, service_role;
+CREATE POLICY "Separate public demonstration cases" ON public.gift_cases AS RESTRICTIVE FOR SELECT TO authenticated USING (public.is_public_gift_demo(auth.uid()) = public.is_public_gift_demo(created_by));
+CREATE POLICY "Separate public demonstration event reads" ON public.gift_case_events AS RESTRICTIVE FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.gift_cases c WHERE c.id=case_id));
+CREATE POLICY "Separate public demonstration event writes" ON public.gift_case_events AS RESTRICTIVE FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM public.gift_cases c WHERE c.id=case_id));
+CREATE POLICY "Public GIFT demo has no fund access" ON public.fund_proposals AS RESTRICTIVE FOR ALL TO authenticated USING (NOT public.is_public_gift_demo(auth.uid())) WITH CHECK (NOT public.is_public_gift_demo(auth.uid()));
+CREATE POLICY "Public GIFT demo has no fund event access" ON public.fund_proposal_events AS RESTRICTIVE FOR ALL TO authenticated USING (NOT public.is_public_gift_demo(auth.uid())) WITH CHECK (NOT public.is_public_gift_demo(auth.uid()));
+CREATE POLICY "Public GIFT demo has no Form FC register access" ON public.form_fc_records AS RESTRICTIVE FOR ALL TO authenticated USING (NOT public.is_public_gift_demo(auth.uid())) WITH CHECK (NOT public.is_public_gift_demo(auth.uid()));

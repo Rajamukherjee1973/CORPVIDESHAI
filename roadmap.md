@@ -1,0 +1,56 @@
+- [x] Add a provider-backed currency outlook agent to the Prediction surface.
+- [x] Show OPI review recommendations, rate provenance, reasoning summaries and conditional financial scenarios.
+- [x] Verify tests and a real SGD request through the Prediction page; all three tests pass, the build is clean and the agent fits on mobile.
+- [x] Add simulation-only dated Form FC submissions with officer details and register status; verified regulator save, reload, officer profile retention and CSV read-back; 9 filing tests pass.
+- [x] Produce and visually verify a 24-page industry impact and competitive intelligence PDF with defensible innovation claims and regulatory boundaries; corrected rupee glyph rendering and an overlong source reference.
+- [x] Integrate all four AI entry points with shared server execution, semantic retrieval, private outcome storage and read-only tool handoffs.
+- [x] Expose integration status on the Architecture desk and preserve simulation-only filings; reject unconnected external actions.
+- [x] Verify real graph, copilot, document and currency requests; FX read and private-access refusal pass; 12 targeted tests pass.
+- [ ] Verify private history save/reload and cross-agent memory as a signed-in user — blocked: no workspace identity header reaches its direct browser.
+- [x] Add invited regulator login and secure shared append-only Form FC records with a connected register.
+- [x] Test signed-in treasury GIFT filing save/reload, Console assigned-company read and sign-out with the provisioned demo account.
+- [x] Add company-scoped corporate dashboard, secure Form FC self-submission and filing recovery states.
+- [x] Expand Treasury Console with 212 investment scenarios, FEMA 2022 reference desk, hub FX and observed five-year history.
+- [x] Verify public navigation, unsigned submission denial, observed GBP history and mobile layout; 15 targeted tests pass.
+- [x] Verify signed-in corporate submission read-back — completed by the subsequent Tata Chemicals Console/register verification; preserve trusted company assignments.
+- [x] Introduce versioned backend service contracts and independent CI test gates without claiming independently deployed services; filing and observed-history implementations are separated from their entry points.
+- [x] Add sourced ODI/OPI legal route assessment with explicit approval, INR and evidence boundaries; correct unsafe blanket summaries in the existing statutory retrieval corpus.
+- [x] Add a standalone Swiss Architecture navigation tab; browser-tested ODI normal/ceiling-breach and OPI assessment, JSON export and mobile layout; all 53 service tests pass and build is clean.
+- [ ] Provision independent service hosting, queues and measured scaling SLOs — blocked: external deployment infrastructure is not provisioned.
+- [ ] Verify remote CI execution and required merge checks — blocked: repository workflow run and branch-protection configuration are outside this local verification.
+- [ ] Certify comprehensive current-law coverage and official approval integration — blocked: counsel-verified amendment consolidation and authorized regulator/bank integrations are not supplied.
+- [x] Unify corporate/regulator filing handoffs, request-local tracing and no-store responses; keep legal content, existing authorization and model requests unchanged.
+- [x] Separate work failures from audit-write failures without automatic replay; 63 regression tests pass, including shared snapshot writes and persistence rejection tests.
+- [x] Browser-check unchanged ODI/OPI assessments and JSON export; mobile overflow absent and no page errors. Build clean after correcting test typing.
+- [x] Verify live corporate filing save/read-back: existing treasury demo account assigned explicitly; Tata Chemicals September 2026 Form FC saved through Console, survives reload and reads back in the shared register.
+- [x] Add feasibility acceptance criteria and downloadable measured evidence: 66 tests pass; production criteria remain explicitly blocked or unverified.
+- [x] Add linked treasury/regulator user-flow maps and a four-layer structural blueprint.
+- [x] Add editable illustrative resource allocation; ₹84 lakh base / ₹96.6 lakh with 15% contingency; browser-verified edit, reset, JSON export and mobile layout.
+- [x] Add an interactive LangChain / LangGraph PoC lab with executable safeguard checks, stage gates and transparent cost scenarios without changing legal content.
+- [x] Verify PoC lab checks, exports and desktop/mobile behavior; 21 targeted tests pass, six browser safeguards pass, JSON read-back and usage calculations verified; checks added to independent CI and build clean.
+- [x] Add an owner-scoped fund proposal portal with demo account assignments and shared GIFT reviewer workflow.
+- [x] Verify fund submission, query response, six-reviewer clearance, GIFT completion, persistence, JSON export and investor isolation with temporary accounts; seven tests and desktop/mobile browser checks pass.
+- [ ] Invite permanent fund users and assign their funds — blocked: recipient email addresses and fund names are not supplied; temporary verification accounts are removed after testing.
+- [x] Compact shared navigation and connect secure application desks, intelligence and VC demonstrations without changing legal or permission logic; legacy simulations remain collapsed and separate.
+- [x] Verify four portal entry links, evidence case tab reload, investor download journey and 893px/390px layouts; no page errors or overflow, 25 regression tests pass. This change did not retest protected record submission.
+- [x] Connect Console company focus, headroom, forecast inputs and corporate filing selection; verified signed-in Form FC save/reload/register read-back, no mobile overflow or page errors, and 21 targeted tests pass. Official RBI submissions remain unavailable.
+- [x] Add first-page FTSE 100/NYSE Composite plus S&P 500, Nasdaq Composite, Dow Jones, DAX and Nikkei 225; all seven provider observations rendered, refresh/selection verified, no mobile overflow or page errors. Public potentially delayed feed, not licensed real-time streaming; future-dated prints rejected.
+- [x] Add connected sector/company, 52-hub, ODI/OPI purpose and amount controls across functional desks; Console, prediction, treasury intelligence, route-intake import and evidence consume shared choices. Verified Infosys/London/ODI-015/₹950 crore, six simulated responses, company timeline, five local case hashes, persisted choices and 893px/390px layouts; 11 regression tests pass and build clean. Catalogue remains partly illustrative; no official regulator integration or additional private filing permissions were added.
+- [x] Audit 38 pages at desktop/mobile, presentation downloads and connected selections; fixed ledger loading mismatch, duplicate bookings and disconnected ledger inputs. 108 tests pass.
+- [x] Make GIFT case opening atomic, enforce review order in the database and prevent stale signed-in screens after sign-out; signed-in filing created exactly one initial hash event.
+- [x] Replace principal-based corridor withholding with sourced UK/US/Singapore income-category ceilings and explicit taxable components; other countries/unclassified captures stay unpriced. London ₹950 crore principal: zero generic withholding, 16.5 bps modelled costs; ₹2 crore UK royalty: ₹30 lakh conditional tax. Booking, JSON export, reload and seven pricing/booking tests pass; related prediction/hub/route principal deductions corrected. Bank fee/GST model remains indicative, not a bank quote or certified current-law consolidation.
+
+- [x] Correct ABHIPSA NATH on pages and six revised presentation PDFs; preserve original editions as archives and connect corrected downloads.
+- [x] Add database-issued unique Fund Portal tracking numbers and server-derived status; verified authenticated submission, initial status, reload, JSON export and two-account privacy with temporary accounts, subsequently removed. Three existing proposals received unique references; five workflow tests pass. Permanent investor invitation remains blocked on recipients and fund names.
+- [x] Replace breach point-cloud with interactive Three.js attack boundaries, four playbooks and replay checkpoints; five transition tests pass, autopilot/pause/all-four restoration verified, scene screenshots nonblank and no desktop/mobile overflow. Scripted demonstrations do not certify resilience or execute attacks.
+- [x] Document nine isolated public GIFT demo sign-ins and walkthrough; browser-verified treasury filing, bank verification, six reviews, IBU release and reload, zero fund/Form FC reads, private GIFT isolation, no page errors/mobile overflow; three workflow tests pass.
+- [x] Consolidate company/hub/currency/category/rationale choices, sourced document checklist and timed hash-verified six-lane Automatic/Approval handoff simulation in Console and Corporate Filings; London/USD/₹950 crore browser flow verified, four workflow tests pass. Secure filing permissions unchanged.
+- [x] Cross-check 37 pages at desktop/phone sizes with no page errors or overflow; live Copilot, document reader and 10-step agent graph returned results; 124 tests pass. AI error messages now use the safe provider formatter.
+- [x] Refresh the one-page synopsis, two-page architecture and 22-page investor deck with the 31 October 2026 prototype snapshot; inspect all 25 pages, fix overlapping notes and graph routing, retain prior editions, and verify three PDF downloads, archive selection and deck navigation. Eleven targeted tests pass; no page errors. This is a document update, not a new production-completeness audit.
+- [x] Final preview audit: all 37 pages at desktop/phone (74 checks), 19 main-menu links, live Copilot/document/agent graph, six market tickers, connected Infosys–London ₹950 crore clearance and export, authenticated public Form FC save/reload plus RBI acknowledgement, and GIFT case/bank handoff save/reload. Fixed duplicated Applications shortcut and stale rationale proof; 127 tests pass with no browser errors or page overflow. Full nine-desk GIFT completion, private corporate/fund-account writes, private AI memory and production integrations were not reverified in this pass.
+- [x] Add About menu with Why CorpVidesh AI, architecture & functional diagrams, Swiss grade vs competitors and Book a demo pages; store demo requests securely.
+- [x] Add an architecture blog (/blog) with a full "How CorpVidesh AI is built" article, linked from the About menu.
+- [ ] Email the owner for each demo request — alert email built and wired; blocked: corpvideshai.com DNS verification in progress and the owner inbox address is not yet supplied.
+- [ ] 3-minute animated team video (Raja, Priyanshu, Aditi voices) + script and post tagging Makers Need More (MnM) — script/post done; video rendering; contributions wording awaits team confirmation.
+- [x] Add 10 African financial hubs in SADC & COMESA as a separate group beside the unchanged 52 (new /africa-hubs page, selectable in every scenario hub picker with live rupee rates, India treaty status and bloc facts).
+- [x] Compact, friendlier navigation: one-row header with Ctrl K / "/" page search, phone slide-out menu, single-row live FX tape, tour + treasury scenario merged into one strip, tighter footer.

@@ -1,0 +1,50 @@
+name: CorpVidesh service contracts
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: service-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  service-tests:
+    name: ${{ matrix.service }} contract gate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: Legal
+            tests: src/tests/legal-service.test.ts src/tests/treasury-investments.test.ts src/tests/feasibility.test.ts
+          - service: Filings
+            tests: src/tests/corporate-access.test.ts src/tests/filing-submissions.test.ts src/tests/filings.test.ts src/tests/filing-service.test.ts
+          - service: Market
+            tests: src/tests/fx.test.ts
+          - service: Agents
+            tests: src/tests/agent-integration.test.ts src/tests/currency-outlook.test.ts src/tests/frontier.test.ts src/tests/service-runtime.test.ts src/tests/poc-evaluation.test.ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - run: bun install --frozen-lockfile
+      - run: bunx vitest run ${{ matrix.tests }} --reporter=default --reporter=junit --outputFile=service-results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.service }}-test-results
+          path: service-results.xml
+  application-build:
+    name: Integrated deployment gate
+    needs: service-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - run: bun install --frozen-lockfile
+      - run: bun run build

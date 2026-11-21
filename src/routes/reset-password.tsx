@@ -1,0 +1,14 @@
+import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Frame } from "@/components/site/Frame";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+const title = "Reset Regulator Portal Password | CorpVidesh AI";
+const description = "Set a new password using your secure regulator portal recovery link.";
+export const Route = createFileRoute("/reset-password")({ head: () => ({ meta: [{ title }, { name: "description", content: description }, { property: "og:title", content: title }, { property: "og:description", content: description }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: Reset });
+function Reset() {
+  const [recovery, setRecovery] = useState(false); const [password, setPassword] = useState(""); const [confirm, setConfirm] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
+  useEffect(() => { setRecovery(new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery" || new URLSearchParams(window.location.search).get("type") === "recovery"); }, []);
+  async function submit(e: React.FormEvent) { e.preventDefault(); if (!recovery || password !== confirm || password.length < 12) { setMessage("Use matching passwords with at least 12 characters and a recovery link."); return; } setBusy(true); const { error } = await supabase.auth.updateUser({ password }); setBusy(false); setMessage(error ? "Password could not be changed. Request a new recovery link." : "Password updated."); setPassword(""); setConfirm(""); }
+  return <Frame><section className="mx-auto max-w-lg px-6 py-12"><h1 className="font-display text-4xl text-primary">Reset your password</h1>{recovery ? <form className="mt-8 space-y-5" onSubmit={submit}>{["New password", "Confirm password"].map((label, i) => <label key={label} className="block text-sm">{label}<input aria-label={label} type="password" autoComplete="new-password" required minLength={12} value={i ? confirm : password} onChange={(e) => i ? setConfirm(e.target.value) : setPassword(e.target.value)} className="mt-2 w-full rounded-md border border-input bg-background px-3 py-3" /></label>)}<Button disabled={busy}>Update password</Button></form> : <p className="mt-6 text-sm">Open the password recovery link from your email.</p>}{message && <p role="status" className="mt-4 text-sm">{message}</p>}<Button asChild variant="link" className="mt-6"><Link to="/regulator-portal">Return to regulator portal</Link></Button></section></Frame>;
+}
