@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { policyRates } from "@/lib/forward-pricing.functions";
+import { hedgeCarry, RATE_SOURCE } from "@/lib/forward-pricing";
 import { Link } from "@tanstack/react-router";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { bookRisk, hedgeCost, policyRatio, shockPnl, type HedgePosition } from "@/lib/fx-swings";
+import { bookRisk, policyRatio, shockPnl, type HedgePosition } from "@/lib/fx-swings";
 import { HUB_CCYS, useMeasuredFxRisk } from "@/lib/use-fx-risk";
 import { useHedgeBook } from "@/lib/hedge-book";
 import { useFxStream } from "@/lib/fx-stream";
@@ -14,9 +17,10 @@ function Frontier({ points, current }: { points: { h: number; risk: number; cost
   const W = 620, H = 240, P = { l: 52, r: 52, t: 14, b: 32 };
   const maxR = Math.max(...points.map((p) => p.risk), 0.01);
   const maxC = Math.max(...points.map((p) => p.cost), 0.01);
+  const minC = Math.min(...points.map((p) => p.cost), 0);
   const X = (h: number) => P.l + h * (W - P.l - P.r);
   const YR = (v: number) => H - P.b - (v / maxR) * (H - P.t - P.b);
-  const YC = (v: number) => H - P.b - (v / maxC) * (H - P.t - P.b);
+  const YC = (v: number) => H - P.b - ((v - minC) / (maxC - minC || 1)) * (H - P.t - P.b);
   const line = (f: (p: { h: number; risk: number; cost: number }) => number) => points.map((p, i) => `${i ? "L" : "M"}${X(p.h).toFixed(1)},${f(p).toFixed(1)}`).join("");
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Residual loss and hedge cost across hedge ratios">
@@ -28,6 +32,8 @@ function Frontier({ points, current }: { points: { h: number; risk: number; cost
       ))}
       <text x={P.l - 6} y={YR(maxR) + 3} textAnchor="end" fontSize="10" className="fill-destructive font-mono-ui">₹{maxR.toFixed(0)}</text>
       <text x={W - P.r + 6} y={YC(maxC) + 3} fontSize="10" className="fill-primary font-mono-ui">₹{maxC.toFixed(1)}</text>
+      <text x={W - P.r + 6} y={YC(minC) + 3} fontSize="10" className="fill-primary font-mono-ui">{minC < 0 ? `−₹${Math.abs(minC).toFixed(1)}` : "₹0"}</text>
+      {minC < 0 && <line x1={P.l} x2={W - P.r} y1={YC(0)} y2={YC(0)} strokeDasharray="2 3" className="stroke-muted-foreground" strokeWidth={0.8} />}
       <path d={line((p) => YR(p.risk))} fill="none" strokeWidth={2} className="stroke-destructive" />
       <path d={line((p) => YC(p.cost))} fill="none" strokeWidth={2} strokeDasharray="5 4" className="stroke-primary" />
       <line x1={X(current)} x2={X(current)} y1={P.t} y2={H - P.b} strokeWidth={1.5} className="stroke-foreground" />
@@ -40,7 +46,10 @@ export function HedgeDesk() {
   const tape = useFxStream();
   const [book, setBook, ready] = useHedgeBook();
   const [horizon, setHorizon] = useState<number>(13);
-  const [carry, setCarry] = useState(2);
+  const [fallback, setFallback] = useState(2);
+  const [marginBp, setMarginBp] = useState(0);
+  const rq = useQuery({ queryKey: ["policy-rates"], queryFn: () => policyRates(), staleTime: 6 * 60 * 60 * 1000, retry: 1 });
+  const rates = rq.data?.rates ?? {};
   const [shock, setShock] = useState(-5);
   const [addCcy, setAddCcy] = useState("EUR");
   const [addCr, setAddCr] = useState(100);
@@ -48,15 +57,18 @@ export function HedgeDesk() {
   const series = q.data?.series ?? {};
   const vols = q.data?.vols ?? {};
   const risk = useMemo(() => bookRisk(book, series, horizon), [book, series, horizon]);
-  const cost = hedgeCost(book, carry / 100, horizon);
+  const spots = tape.anchorInrPer;
+  const carry = hedgeCarry(book, spots, rates, horizon, marginBp / 10_000, fallback / 100);
+  const cost = -carry.netCr;
+  const lineFor = (code: string) => carry.lines.find((l) => l.code === code);
   const pnl = shockPnl(book, shock / 100);
   const gross = book.reduce((s, p) => s + Math.max(0, p.exposureCr), 0);
   const avgHedge = gross > 0 ? book.reduce((s, p) => s + Math.max(0, p.exposureCr) * p.hedgeRatio, 0) / gross : 0;
   const frontier = useMemo(() => Array.from({ length: 11 }, (_, i) => {
     const h = i / 10;
     const b = book.map((p) => ({ ...p, hedgeRatio: h }));
-    return { h, risk: bookRisk(b, series, horizon)?.hedgedVar ?? 0, cost: hedgeCost(b, carry / 100, horizon) };
-  }), [book, series, horizon, carry]);
+    return { h, risk: bookRisk(b, series, horizon)?.hedgedVar ?? 0, cost: -hedgeCarry(b, spots, rates, horizon, marginBp / 10_000, fallback / 100).netCr };
+  }), [book, series, horizon, spots, rates, marginBp, fallback]);
 
   const update = (i: number, patch: Partial<HedgePosition>) => setBook(book.map((p, k) => (k === i ? { ...p, ...patch } : p)));
   const applyPolicy = () => setBook(book.map((p) => (vols[p.code] ? { ...p, hedgeRatio: policyRatio(vols[p.code]!.vol).ratio } : p)));
@@ -67,10 +79,10 @@ export function HedgeDesk() {
       title: "CorpVidesh AI hedge desk memo (illustrative, not advice)",
       generatedAt: new Date().toISOString(),
       horizonWeeks: horizon,
-      carryAssumptionPa: carry / 100,
+      forwardPricing: { method: "Covered interest parity on official policy rates", source: RATE_SOURCE, inrRate: rates["INR"] ?? null, bankMarginPa: marginBp / 10_000, fallbackCostPaForUnpriced: fallback / 100, lines: carry.lines, netCarryCr: carry.netCr },
       positions: book.map((p) => ({ ...p, liveInrPerUnit: tape.anchorInrPer[p.code] ?? null, measuredVol: vols[p.code]?.vol ?? null, policy: vols[p.code] ? policyRatio(vols[p.code]!.vol) : null })),
       risk,
-      hedgeCostCr: cost,
+      hedgeNetCostCr: cost,
       shock: { pct: shock, ...pnl },
       sources: { live: `${tape.source} ${tape.anchor}`, history: q.data?.source, asOf: q.data?.asOf, method: q.data?.method },
     };
@@ -94,8 +106,11 @@ export function HedgeDesk() {
             ))}
           </div>
         </div>
-        <label className="text-xs text-muted-foreground">Forward cost assumption (% a year)
-          <input type="number" step={0.25} min={0} max={15} value={carry} onChange={(e) => setCarry(Math.max(0, Number(e.target.value) || 0))} className="mt-1 block w-28 border border-input bg-background px-3 py-1.5 font-mono-ui text-foreground" />
+        <label className="text-xs text-muted-foreground">Your bank's margin (basis points a year)
+          <input type="number" step={5} min={0} max={500} value={marginBp} onChange={(e) => setMarginBp(Math.max(0, Number(e.target.value) || 0))} className="mt-1 block w-28 border border-input bg-background px-3 py-1.5 font-mono-ui text-foreground" />
+        </label>
+        <label className="text-xs text-muted-foreground">Cost if no official rate (% a year)
+          <input type="number" step={0.25} min={0} max={15} value={fallback} onChange={(e) => setFallback(Math.max(0, Number(e.target.value) || 0))} className="mt-1 block w-28 border border-input bg-background px-3 py-1.5 font-mono-ui text-foreground" />
         </label>
         <Button size="sm" variant="outline" onClick={applyPolicy}>Apply example policy to all</Button>
         <Button size="sm" variant="outline" onClick={exportMemo}><Download className="mr-1 h-3.5 w-3.5" />Hedge memo</Button>
@@ -107,7 +122,7 @@ export function HedgeDesk() {
           { k: "Bad case, no hedges", v: risk ? cr(-risk.unhedgedVar) : "—", n: "1 in 20 chance of worse", c: "text-destructive" },
           { k: "Bad case, with your hedges", v: risk ? cr(-risk.hedgedVar) : "—", n: `${Math.round(avgHedge * 100)}% of ₹${gross.toFixed(0)} cr covered`, c: "" },
           { k: "Risk removed", v: risk ? `${Math.round(removed * 100)}%` : "—", n: "of the bad-case loss", c: "text-primary" },
-          { k: "Hedge cost", v: cr(cost), n: `at ${carry}% a year, assumed`, c: "" },
+          { k: carry.netCr >= 0 ? "Forwards earn you" : "Forwards cost you", v: cr(Math.abs(carry.netCr)), n: `${carry.lines.filter((l) => l.priced).length} of ${carry.lines.length} priced from official rates`, c: carry.netCr >= 0 ? "text-primary" : "" },
           { k: "Spread across currencies saves", v: risk ? cr(risk.diversification) : "—", n: "vs adding each one up", c: "" },
         ].map((x) => (
           <div key={x.k} className="bg-background p-4">
@@ -120,9 +135,9 @@ export function HedgeDesk() {
       {!risk && <p className="text-sm text-muted-foreground" role="status">{q.isPending || !ready ? "Loading a year of rates for your book…" : "Add currencies with at least six months of shared history to see the combined risk."}</p>}
 
       <div className="overflow-x-auto border border-rule/30">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-muted/40 text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            <tr><th className="p-3">Currency</th><th className="p-3 text-right">Live ₹</th><th className="p-3">Exposure (₹ cr)</th><th className="p-3">Covered with forwards</th><th className="p-3 text-right">Vol</th><th className="p-3">Example policy</th><th className="p-3 text-right">Bad case alone</th><th className="p-3" aria-label="Remove" /></tr>
+            <tr><th className="p-3">Currency</th><th className="p-3 text-right">Live ₹</th><th className="p-3">Exposure (₹ cr)</th><th className="p-3">Covered with forwards</th><th className="p-3 text-right">Forward ₹ · {HORIZONS.find(([w]) => w === horizon)?.[1]}</th><th className="p-3 text-right">Vol</th><th className="p-3">Example policy</th><th className="p-3 text-right">Bad case alone</th><th className="p-3" aria-label="Remove" /></tr>
           </thead>
           <tbody>
             {book.map((p, i) => {
@@ -141,6 +156,11 @@ export function HedgeDesk() {
                       <span className="w-10 font-mono-ui">{Math.round(p.hedgeRatio * 100)}%</span>
                     </div>
                   </td>
+                  <td className="p-3 text-right font-mono-ui">{(() => {
+                    const l = lineFor(p.code);
+                    if (!l?.priced || l.forward == null || l.premiumPa == null) return <span className="text-xs text-muted-foreground" title="No official policy rate in the source; the fallback cost applies">{rq.isPending ? "…" : "no official rate"}</span>;
+                    return <span title={l.proxyOf ? `Pegged: uses the ${l.proxyOf} policy rate` : undefined}>₹{l.forward < 10 ? l.forward.toFixed(3) : l.forward.toFixed(2)}<span className={`block text-[10px] ${l.premiumPa >= 0 ? "text-primary" : "text-destructive"}`}>{l.premiumPa >= 0 ? "+" : ""}{(l.premiumPa * 100).toFixed(2)}% a yr{l.proxyOf ? ` · ${l.proxyOf} peg` : ""}</span></span>;
+                  })()}</td>
                   <td className="p-3 text-right font-mono-ui">{v != null ? `${(v * 100).toFixed(1)}%` : "n/a"}</td>
                   <td className="p-3">{pol ? <button type="button" onClick={() => update(i, { hedgeRatio: pol.ratio })} className="text-xs text-primary hover:underline">{pol.band}: use {Math.round(pol.ratio * 100)}%</button> : "—"}</td>
                   <td className="p-3 text-right font-mono-ui text-destructive">{alone != null ? cr(-alone) : "—"}</td>
@@ -164,7 +184,7 @@ export function HedgeDesk() {
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Cover more, pay more</div>
           <h3 className="mt-1 font-display text-2xl">Bad-case loss vs hedge cost at every cover level</h3>
           <div className="mt-4"><Frontier points={frontier} current={avgHedge} /></div>
-          <p className="mt-2 text-xs text-muted-foreground"><span className="text-destructive">Solid red</span>: bad-case loss left over. <span className="text-primary">Dashed</span>: forward cost. Black line: your current average cover.</p>
+          <p className="mt-2 text-xs text-muted-foreground"><span className="text-destructive">Solid red</span>: bad-case loss left over. <span className="text-primary">Dashed</span>: net forward cost (below the dotted zero line means the forwards earn money). Black line: your current average cover.</p>
         </div>
         <div className="border border-rule/30 p-5">
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Stress test</div>
@@ -204,7 +224,7 @@ export function HedgeDesk() {
       )}
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Illustrative risk desk. Losses use a year of weekly rupee reference rates ({q.data?.asOf ? `to ${q.data.asOf}` : "loading"}) and how the currencies moved together; live rates come from the 60-second interbank feed. The forward cost is your assumption, the cover rule is an example, and nothing here books, quotes or recommends a hedge — forwards are arranged with an authorised dealer bank under its own documentation. Your book stays in this browser tab only.
+        Illustrative risk desk. Losses use a year of weekly rupee reference rates ({q.data?.asOf ? `to ${q.data.asOf}` : "loading"}) and how the currencies moved together; spot comes from the 60-second interbank feed. Forward prices are worked out from today's spot and the official central bank rates of India{rates["INR"] ? ` (${rates["INR"].ratePct}% on ${rates["INR"].date})` : ""} and each currency's country ({RATE_SOURCE}). That is the fair price before your bank's margin, not a bank's dealable quote; banks price off money-market rates that can differ. {rq.data?.error ?? ""} The cover rule is an example, and nothing here books, quotes or recommends a hedge — forwards are arranged with an authorised dealer bank under its own documentation. Your book stays in this browser tab only.
       </p>
     </div>
   );

@@ -48,5 +48,5 @@
 - All menus, page search and footer read `nav-data.ts`; keeps every page reachable.
 - /source reads GitHub via a server fn returning commit metadata only.
 - AI agent architecture rules live in src/lib/agents/AGENTS.md.
-- Currency-risk dashboard/hedge desk: pure `lib/fx-swings` on measured weekly series + feed anchor print (no micro-walk ticks); hedge book is session-only browser state.
+- Currency-risk dashboard/hedge desk: pure `lib/fx-swings` on measured weekly series + feed anchor print (no micro-walk ticks); hedge book is session-only browser state; forwards are covered-parity prices from BIS policy rates (labelled peg proxies, fallback assumption when unpriced), never bank quotes.
 - /security: tabbed (?view=); Three.js loads only in a browser effect; live checks are read-only signed-out probes reporting gaps as found; STRIDE rows say Enforced/Simulated/Not built, never certified.
