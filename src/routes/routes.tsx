@@ -19,7 +19,8 @@ import {
 import { useEvidenceState, type EvidenceStatus } from "@/lib/evidence-state";
 import { ROLE_LABEL, canSetStatus, usePermissions } from "@/lib/evidence-permissions";
 import { useSession } from "@/lib/session";
-import { HUBS } from "@/data/hubs";
+import { findHub } from "@/data/hub-catalog";
+import { HubOptions } from "@/components/site/HubOptions";
 import { COUNTRY_META } from "@/data/currencies";
 import { LISTED_1000, NETWORTH_FY, findListed, networthNote } from "@/data/listed";
 import { AD_BANKS, banksForCountry } from "@/data/banks";
@@ -116,7 +117,7 @@ function RouteDesk() {
 
   // Intake resolution: filer → audited net worth; hub → jurisdiction bank list.
   const filer = findListed(fields["entity"] ?? "");
-  const hub = HUBS.find((h) => h.city === (fields["hub"] ?? "")) ?? null;
+  const hub = findHub(fields["hub"] ?? "") ?? null;
   const hubMeta = hub ? (COUNTRY_META[hub.country] ?? null) : null;
   const overseasBanks = useMemo(
     () => (hub ? banksForCountry(hub.country, hub.city) : []),
@@ -326,7 +327,7 @@ function RouteDesk() {
                     <div key={f.key} className="grid gap-4">
                       <label className="block">
                         <span className="font-mono-ui block text-[9px] uppercase tracking-[0.16em] text-primary">
-                          Target financial hub — all 52 corridors
+                          Target financial hub — 52 global + 10 African corridors
                         </span>
                         <select
                           value={fields["hub"] ?? ""}
@@ -334,11 +335,7 @@ function RouteDesk() {
                           className="mt-1.5 w-full border border-rule/25 bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
                         >
                           <option value="">Select the hub…</option>
-                          {HUBS.map((h) => (
-                            <option key={h.city} value={h.city}>
-                              {h.city} · {h.country}
-                            </option>
-                          ))}
+                          <HubOptions />
                         </select>
                         <span className="mt-1 block text-xs text-muted-foreground">
                           {hub

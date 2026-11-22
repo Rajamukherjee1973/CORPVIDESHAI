@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { HUBS, type Hub } from "@/data/hubs";
+import type { Hub } from "@/data/hubs";
+import { SCENARIO_HUBS as HUBS, isAfricanBlocHub } from "@/data/hub-catalog";
 
 const W = 1000;
 const H = 500;
@@ -23,7 +24,7 @@ export function HubMap() {
   return (
     <div className="grid gap-px bg-rule/15 lg:grid-cols-[1.65fr_1fr]">
       <div className="bg-background p-4">
-        <svg viewBox={`0 ${H * 0.1} ${W} ${H * 0.78}`} className="w-full" role="img" aria-label="Routing map of 52 international finance hubs from GIFT City">
+        <svg viewBox={`0 ${H * 0.1} ${W} ${H * 0.78}`} className="w-full" role="img" aria-label="Routing map of 52 global and 10 African finance hubs from GIFT City">
           <g stroke="currentColor" className="text-rule/12" strokeWidth={0.5}>
             {Array.from({ length: 11 }, (_, i) => (
               <line key={`h${i}`} x1={0} x2={W} y1={(i * H) / 10} y2={(i * H) / 10} />
@@ -59,7 +60,8 @@ export function HubMap() {
                   y={p.y - (on ? 4 : 2.4)}
                   width={on ? 8 : 4.8}
                   height={on ? 8 : 4.8}
-                  className={on ? "fill-primary" : "fill-rule/45"}
+                  transform={isAfricanBlocHub(h.city) ? `rotate(45 ${p.x} ${p.y})` : undefined}
+                  className={on ? "fill-primary" : isAfricanBlocHub(h.city) ? "fill-primary/60" : "fill-rule/45"}
                 />
                 {on && (
                   <text
@@ -81,7 +83,9 @@ export function HubMap() {
 
       <div className="bg-background p-6">
         <p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">
-          Corridor {String(HUBS.indexOf(active) + 1).padStart(2, "0")} / 52
+          {isAfricanBlocHub(active.city)
+            ? `African hub ${String(HUBS.indexOf(active) - 51).padStart(2, "0")} / 10 · SADC/COMESA`
+            : `Corridor ${String(HUBS.indexOf(active) + 1).padStart(2, "0")} / 52`}
         </p>
         <h3 className="font-display mt-2 text-4xl">{active.city}</h3>
         <p className="text-sm text-muted-foreground">{active.country}</p>
@@ -108,7 +112,7 @@ export function HubMap() {
         </p>
 
         <p className="mt-6 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-          Hover or tap any node. Prototype data — indicative, not advice.
+          Hover or tap any node · squares: 52 global · diamonds: 10 African. Prototype data — indicative, not advice.
         </p>
       </div>
     </div>

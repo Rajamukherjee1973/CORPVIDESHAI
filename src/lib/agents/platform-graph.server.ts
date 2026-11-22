@@ -1,19 +1,16 @@
 /**
- * Managed-deployment entry point for the statutory graph.
+ * Managed-deployment entry points declared in `langgraph.json`.
  *
- * LangGraph Platform (LangGraph Cloud) reads `langgraph.json`, imports this
- * factory and hosts the compiled graph behind a managed assistant endpoint with
- * its own task queue, autoscaling and persistence. The same compiled graph runs
- * in-process inside the app, so a run executed on the desk and a run executed
- * on the managed deployment are byte-for-byte the same topology.
+ * NOTE: "statutory" is the statutory subgraph alone; "mesh" is the full agent
+ * mesh that dispatches to all four AI agents. The app runs the same compiled
+ * graphs in-process; a managed LangGraph deployment is not connected.
  */
-
 import { buildGraph } from "@/lib/agents/graph.server";
+export { makeMeshGraph } from "@/lib/agents/mesh.server";
 
 export function makeDeployedGraph() {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new Error("The statutory graph is not configured.");
-  return buildGraph(key);
+  if (!process.env["LOVABLE_API_KEY"]) throw new Error("The statutory graph is not configured.");
+  return buildGraph();
 }
 
 export default makeDeployedGraph;

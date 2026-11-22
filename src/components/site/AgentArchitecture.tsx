@@ -2,8 +2,9 @@ import type { AgentTab } from "@/components/site/AgentDesk";
 
 type Layer = { n: string; title: string; items: { label: string; agents: AgentTab[] }[] };
 
-const ALL: AgentTab[] = ["graph", "copilot", "reader", "outlook", "tools"];
+const ALL: AgentTab[] = ["graph", "copilot", "reader", "outlook", "tools", "training"];
 const AI: AgentTab[] = ["graph", "copilot", "reader", "outlook"];
+const AI_LEARNING: AgentTab[] = [...AI, "training"];
 
 /** Where each agent sits: what it reads, which safeguards apply and what it returns. Descriptive only. */
 export const AGENT_LAYERS: Layer[] = [
@@ -13,8 +14,10 @@ export const AGENT_LAYERS: Layer[] = [
     { label: "Board resolution · photo", agents: ["reader"] },
     { label: "Live FX provider rate", agents: ["copilot", "outlook", "tools"] },
     { label: "Cited statute corpus", agents: ["graph", "tools"] },
+    { label: "Your reviewed examples (ratings)", agents: AI_LEARNING },
   ] },
   { n: "03", title: "Safeguards", items: [
+    { label: "One LangGraph mesh · fixed dispatch", agents: AI_LEARNING },
     { label: "Server-only model calls", agents: AI },
     { label: "Evidence grader + rewrite loop", agents: ["graph"] },
     { label: "QA veto · fails closed", agents: ["graph"] },
@@ -28,11 +31,12 @@ export const AGENT_LAYERS: Layer[] = [
     { label: "Extracted facts · filings triggered", agents: ["reader"] },
     { label: "Allocation · hedge · review trigger", agents: ["outlook"] },
     { label: "Provider snapshot JSON", agents: ["tools"] },
+    { label: "Ratings → examples · evaluation · dataset", agents: ["training"] },
     { label: "Human desk decides", agents: ALL },
   ] },
 ];
 
-const NAMES: Record<AgentTab, string> = { graph: "Statutory graph", copilot: "Treasury copilot", reader: "Document reader", outlook: "Currency outlook", tools: "Connected tools" };
+const NAMES: Record<AgentTab, string> = { graph: "Statutory graph", copilot: "Treasury copilot", reader: "Document reader", outlook: "Currency outlook", tools: "Connected tools", training: "Training loop" };
 
 export function AgentArchitecture({ active, onPick }: { active: AgentTab; onPick: (t: AgentTab) => void }) {
   const [inputs, safeguards, outputs] = AGENT_LAYERS as [Layer, Layer, Layer];

@@ -7,10 +7,11 @@ import { HubExplorer } from "@/components/site/HubExplorer";
 import { Currency52Board } from "@/components/site/Currency52Board";
 import { LiveMarketsDesk, HubComparative } from "@/components/site/LiveMarketsDesk";
 import { HUBS } from "@/data/hubs";
+import { HubPredictiveCompare } from "@/components/site/HubPredictiveCompare";
 
 const TITLE = "52 Finance Hubs — Outbound Routing Map | CorpVidesh AI";
 const DESC =
-  "Route, treaty position, withholding view and clearance time for all 52 international finance hubs served from GIFT City by the CorpVidesh AI outbound rail.";
+  "Route, treaty position and clearance time for 52 global and 10 African finance hubs, with interactive predictive comparison of cost, FX risk and route time from GIFT City.";
 
 export const Route = createFileRoute("/hubs")({
   head: () => ({
@@ -54,6 +55,19 @@ function Hubs() {
         </Link>
       </section>
 
+      <section className="mx-auto max-w-[1400px] px-6 pb-16">
+        <Rule label="Predictive comparison — 52 global + 10 African hubs" />
+        <h2 className="font-display mb-3 max-w-4xl text-4xl lg:text-5xl">
+          Sixty-two corridors. One forecast model. Ranked for your ticket.
+        </h2>
+        <p className="mb-8 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          Set the ticket, route and evidence once. Every hub — global and African — runs through the same
+          prediction model, so cost, FX tail risk and route time compare like for like. Pin up to three hubs
+          to read them side by side.
+        </p>
+        <HubPredictiveCompare />
+      </section>
+
       <section className="mx-auto max-w-[1400px] px-6 pb-12">
         <ForecastLede desk="Hub atlas" focus={["drift", "cost"]} />
       </section>
@@ -81,7 +95,7 @@ function Hubs() {
       </section>
 
       <section className="mx-auto max-w-[1400px] px-6 pb-16">
-        <Rule label="Comparative — 52 hubs × India's intergovernmental arrangements" />
+        <Rule label="Comparative — 62 hubs × India's intergovernmental arrangements" />
         <HubComparative />
       </section>
 

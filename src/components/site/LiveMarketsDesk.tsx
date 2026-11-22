@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFxStream } from "@/lib/fx-stream";
-import { HUBS } from "@/data/hubs";
+import { hubsIn, hubGroup, UNIVERSE_LABEL, type HubUniverse } from "@/lib/hub-compare";
 import { COUNTRY_META, flag } from "@/data/currencies";
 import { arrangementDepth, arrangementFor } from "@/data/india-arrangements";
 
@@ -149,17 +149,18 @@ export function LiveMarketsDesk() {
 
 type SortKey = "depth" | "wht" | "days" | "move";
 
-/** 52-hub comparative grid: live FX move + India's intergovernmental arrangements. */
+/** 62-hub comparative grid (52 global + 10 African): live FX move + India's intergovernmental arrangements. */
 export function HubComparative() {
   const t = useFxStream();
   const open = useRef<Record<string, number>>({});
   const [sort, setSort] = useState<SortKey>("depth");
   const [q, setQ] = useState("");
   const [onlyTrade, setOnlyTrade] = useState(false);
+  const [universe, setUniverse] = useState<HubUniverse>("all");
   for (const [c, v] of Object.entries(t.inrPer)) if (open.current[c] == null && t.status !== "loading") open.current[c] = v;
 
   const rows = useMemo(() => {
-    const out = HUBS.map((h) => {
+    const out = hubsIn(universe).map((h) => {
       const meta = COUNTRY_META[h.country];
       const ccy = meta?.currency ?? "USD";
       const a = arrangementFor(h.country);
@@ -176,7 +177,7 @@ export function HubComparative() {
       move: (a, b) => Math.abs(b.move) - Math.abs(a.move),
     };
     return out.sort(f[sort]);
-  }, [t, sort, q, onlyTrade]);
+  }, [t, sort, q, onlyTrade, universe]);
 
   const top = rows[0];
   return (
@@ -187,6 +188,13 @@ export function HubComparative() {
           {top.h.city} ranks first on <b>{{ depth: "arrangement depth", wht: "lowest treaty withholding", days: "fastest legacy clearance", move: "largest live FX move" }[sort]}</b> — {top.a.trade}; DTAA {top.a.dtaa.toLowerCase()}; {top.ccy}/INR {top.px.toFixed(4)}. Use it as a shortlist starting point, then confirm treaty eligibility (TRC, Form 10F, PPT/LOB) before routing.
         </div>
       )}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Hub universe">
+        {(["all", "global", "africa", "SADC", "COMESA"] as HubUniverse[]).map((u) => (
+          <button key={u} onClick={() => setUniverse(u)} aria-pressed={universe === u} className={`h-8 border px-3 font-mono-ui text-[10px] uppercase tracking-[0.14em] ${universe === u ? "border-primary bg-primary text-primary-foreground" : "border-rule/30"}`}>
+            {UNIVERSE_LABEL[u]}
+          </button>
+        ))}
+      </div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search hub, country, currency" aria-label="Search hubs" className="h-9 w-64 border border-rule/30 bg-background px-3 text-sm" />
         {(["depth", "wht", "days", "move"] as SortKey[]).map((k) => (
@@ -211,7 +219,7 @@ export function HubComparative() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.h.city} className="border-t border-rule/12 even:bg-secondary/60 align-top">
-                <td className="px-3 py-2 font-medium">{r.meta ? flag(r.meta.iso2) : ""} {r.h.city}<div className="text-xs font-normal text-muted-foreground">{r.h.country}</div></td>
+                <td className="px-3 py-2 font-medium">{r.meta ? flag(r.meta.iso2) : ""} {r.h.city}<div className="text-xs font-normal text-muted-foreground">{r.h.country}{hubGroup(r.h.city) === "africa" && <span className="ml-1 font-mono-ui text-[9px] uppercase text-primary">· African 10</span>}</div></td>
                 <td className="tnum px-3 py-2"><Dir now={r.px} prev={t.prev[r.ccy]} /> {r.ccy} {r.px < 1 ? r.px.toFixed(6) : r.px.toFixed(4)}</td>
                 <td className={`tnum px-3 py-2 ${r.move > 0 ? "text-primary" : r.move < 0 ? "text-destructive" : "text-muted-foreground"}`}>{r.move >= 0 ? "+" : ""}{r.move.toFixed(1)} bps</td>
                 <td className="px-3 py-2">{r.a.dtaa}{r.a.verify && <span title="Status should be verified against the official source" className="ml-1 text-primary">*</span>}</td>

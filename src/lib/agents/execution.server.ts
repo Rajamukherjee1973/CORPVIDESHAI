@@ -44,7 +44,7 @@ export async function recentExecutions(viewer: Awaited<ReturnType<typeof executi
 export async function executeAgent<T>(
   agent: "statutory" | "copilot" | "document" | "currency" | "tool",
   inputSummary: string,
-  work: (context: string) => Promise<T>,
+  work: (context: string, viewer: Awaited<ReturnType<typeof executionViewer>>) => Promise<T>,
   summarize: (result: T) => string,
   accepted: (result: T) => boolean = () => true,
 ) {
@@ -52,7 +52,7 @@ export async function executeAgent<T>(
     const viewer = await executionViewer();
     const previous = await recentExecutions(viewer);
     return auditedWork({
-      work: () => work(memoryContext(previous)), summarize, accepted, safeError: outlookError,
+      work: () => work(memoryContext(previous), viewer), summarize, accepted, safeError: outlookError,
       persist: async (outcome) => {
         if (!viewer) return;
         const record = outcome.status === "failed"

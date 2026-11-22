@@ -1,3 +1,4 @@
+import type { LearningSummary } from "./training";
 /** Shared (client-safe) types for the multi-agent statutory graph. */
 
 export type AgentNode =
@@ -54,6 +55,8 @@ export type AgentRunResult = {
   spans: TraceSpan[];
   totals: { latencyMs: number; promptTokens: number; completionTokens: number; costUsd: number };
   tracing: { provider: "langsmith" | "local"; project: string; enabled: boolean };
+  /** Set by the agent mesh: how many reviewer-endorsed examples shaped this run. */
+  learning?: LearningSummary;
 };
 
 export const AGENT_LABEL: Record<AgentNode, string> = {

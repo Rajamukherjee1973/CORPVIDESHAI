@@ -8,6 +8,8 @@ import { RAIL_CURRENCIES } from "@/lib/opi-signal";
 import { inrPer, useLiveFeed } from "@/lib/live-feed";
 import { recordCapture } from "@/lib/fx-stream";
 import { logAgentRun } from "@/lib/agent-session";
+import { guestExamplesFor } from "@/lib/agent-training";
+import { LearningNote, RateAnswer } from "@/components/site/AgentLearning";
 
 type AgentResult = Extract<Awaited<ReturnType<typeof runCurrencyOutlook>>, { ok: true }>["result"];
 
@@ -31,7 +33,7 @@ export function CurrencyOutlookAgent({ corridorCode, compact = false }: { corrid
     setResult(null);
     const t0 = performance.now();
     try {
-      const response = await run({ data: { code, budgetCr, months } });
+      const response = await run({ data: { code, budgetCr, months, examples: guestExamplesFor("currency", `${code} / INR · ${budgetCr} crore · ${months} months`) } });
       logAgentRun("outlook", performance.now() - t0, response.ok);
       if (!response.ok) { setError(response.error); return; }
       setResult(response.result);
@@ -69,6 +71,7 @@ export function CurrencyOutlookAgent({ corridorCode, compact = false }: { corrid
         ].map(([label, value]) => <div key={label}><p className="text-xs text-muted-foreground">{label}</p><p className="font-mono-ui mt-2 break-words text-sm text-primary">{value}</p></div>)}</div>
         <div className="mt-6 grid gap-6 lg:grid-cols-2"><div><h4 className="font-mono-ui text-xs uppercase text-primary">Reasoning summary · evidence and assumptions</h4><ol className="mt-3 space-y-3">{result.answer.rationale.map((r, i) => <li key={i} className="flex gap-3 text-sm leading-relaxed"><span className="font-mono-ui text-primary">0{i + 1}</span><span>{r}</span></li>)}</ol></div><div><h4 className="font-mono-ui text-xs uppercase text-primary">Risks & review trigger</h4><ul className="mt-3 list-inside list-disc space-y-2 text-sm leading-relaxed text-muted-foreground">{result.answer.risks.map((r, i) => <li key={i}>{r}</li>)}</ul><p className="mt-4 text-sm font-medium">{result.answer.reviewTrigger}</p></div></div>
         <p className="mt-5 text-xs text-muted-foreground">Evidence: {result.snapshot.source} · provider timestamp {result.snapshot.providerStamp} · {result.snapshot.tier} feed. Latest displayed provider rate: {rate ? `₹${rate.toFixed(4)}/${code}` : "unavailable"}. Generated outlooks do not refresh automatically.</p>
+        <div className="mt-5 space-y-2"><LearningNote learning={result.learning} /><RateAnswer key={result.snapshot.capturedAt} agent="currency" question={`${result.snapshot.code} / INR · ${result.budgetCr} crore · ${result.months} months`} answer={`Outlook: ${result.answer.outlook}\nAction: ${result.answer.action}`} /></div>
         <Button asChild variant="outline" className="mt-4 rounded-none"><a href="/portfolio">Review OPI portfolio book <ArrowUpRight /></a></Button>
       </div>}
       <p className="pb-5 pt-4 text-xs leading-relaxed text-muted-foreground">Conditional planning scenarios, not calibrated probabilities or investment advice. Provider rates may be daily reference composites, not executable tick prices. No synthetic history or simulated ticks enter this agent. OPI requires security eligibility, headroom and AD-bank review; nothing is invested automatically. Translation excludes asset returns, fees, tax and hedge carry. AI requests use workspace credits.</p>

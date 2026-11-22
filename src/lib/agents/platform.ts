@@ -23,7 +23,7 @@ export const DEPLOYMENT = {
   graphId: "statutory",
   configFile: "langgraph.json",
   factory: "src/lib/agents/platform-graph.server.ts:makeDeployedGraph",
-  runtime: "Application-hosted LangGraph via server functions. Managed LangGraph deployment is not connected.",
+  runtime: "Application-hosted LangGraph via server functions: the agent mesh (all four AI agents) and its statutory subgraph, both declared in langgraph.json. Managed LangGraph deployment is not connected.",
   persistence: "Verified users: private append-only run outcomes in Lovable Cloud. Node-resume checkpoints are not configured.",
   scaling:
     "Request-driven application runtime; no managed graph queue or background resume is provisioned.",

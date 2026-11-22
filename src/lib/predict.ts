@@ -77,6 +77,22 @@ const VOL: Record<string, number> = {
   HKD: 0.047,
   AUD: 0.091,
   CAD: 0.074,
+  // African corridors (assumed, indicative): wider bands for managed or recently floated currencies.
+  ZAR: 0.15,
+  NAD: 0.15, // 1:1 rand peg — inherits ZAR behaviour
+  BWP: 0.09,
+  KES: 0.08,
+  NGN: 0.3,
+  EGP: 0.25,
+  MUR: 0.06,
+  TZS: 0.06,
+  MZN: 0.05,
+  AOA: 0.22,
+  ZMW: 0.2,
+  SCR: 0.1,
+  RWF: 0.07,
+  UGX: 0.07,
+  ETB: 0.35,
 };
 
 export function volFor(code: string): number {

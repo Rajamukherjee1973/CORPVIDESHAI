@@ -6,6 +6,9 @@ import type { CopilotAnswer, DocExtract } from "@/lib/frontier.server";
 import { findPurpose } from "@/data/purposes";
 import { scenarioCurrency, useTreasuryScenario } from "@/lib/treasury-scenario";
 import { logAgentRun } from "@/lib/agent-session";
+import { guestExamplesFor } from "@/lib/agent-training";
+import type { LearningSummary } from "@/lib/agents/training";
+import { LearningNote, RateAnswer } from "@/components/site/AgentLearning";
 
 const CARD = "border border-rule/20 bg-background p-5";
 const LABEL = "font-mono-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground";
@@ -32,9 +35,11 @@ export function TreasuryCopilot({ desk = "Frontier desk" }: { desk?: string }) {
   const [q, setQ] = useState(SAMPLES[0]!);
   const [busy, setBusy] = useState(false);
   const [ans, setAns] = useState<CopilotAnswer | null>(null);
+  const [learning, setLearning] = useState<LearningSummary | undefined>();
+  const [asked, setAsked] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const run = async () => {
-    setBusy(true); setErr(null); setAns(null);
+    setBusy(true); setErr(null); setAns(null); setLearning(undefined); setAsked(q);
     const usd = tape.inrPer["USD"];
     const local = tape.inrPer[ccy];
     const ctx = [
@@ -46,9 +51,9 @@ export function TreasuryCopilot({ desk = "Frontier desk" }: { desk?: string }) {
     recordCapture(desk, "action", "Copilot question", ccy);
     const t0 = performance.now();
     try {
-      const r = await ask({ data: { question: q, context: ctx } });
+      const r = await ask({ data: { question: q, context: ctx, examples: guestExamplesFor("copilot", q) } });
       logAgentRun("copilot", performance.now() - t0, r.ok);
-      if (r.ok) setAns(r.answer); else setErr(r.error);
+      if (r.ok) { setAns(r.answer); setLearning(r.learning); } else setErr(r.error);
     } catch { logAgentRun("copilot", performance.now() - t0, false); setErr("The copilot could not answer just now. Try again in a moment."); }
     setBusy(false);
   };
@@ -87,6 +92,8 @@ export function TreasuryCopilot({ desk = "Frontier desk" }: { desk?: string }) {
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">{ans.risks.slice(0, 3).map((l) => <li key={l}>{l}</li>)}</ul>
             </details>
             <p className="font-mono-ui text-[11px] text-primary">Model confidence {Math.round(Math.min(1, Math.max(0, ans.confidence)) * 100)}% · not a calibrated probability</p>
+            <LearningNote learning={learning} />
+            <RateAnswer key={`${asked}-${ans.forecast}`} agent="copilot" question={asked} answer={`Forecast: ${ans.forecast}\nAction: ${ans.action}`} />
           </div>
         ) : null}
       </div>
@@ -105,6 +112,8 @@ export function DocumentReader({ desk = "Frontier desk" }: { desk?: string }) {
   const [image, setImage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [doc, setDoc] = useState<DocExtract | null>(null);
+  const [learning, setLearning] = useState<LearningSummary | undefined>();
+  const [asked, setAsked] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const onFile = (f: File | undefined) => {
     if (!f) return;
@@ -114,13 +123,14 @@ export function DocumentReader({ desk = "Frontier desk" }: { desk?: string }) {
     } else { void f.text().then((t) => { setText(t.slice(0, 20000)); setImage(undefined); }); }
   };
   const run = async () => {
-    setBusy(true); setErr(null); setDoc(null);
+    const docQuestion = text.slice(0, 400) || "Uploaded document image";
+    setBusy(true); setErr(null); setDoc(null); setLearning(undefined); setAsked(docQuestion);
     recordCapture(desk, "action", "Document read", "USD");
     const t0 = performance.now();
     try {
-      const r = await read({ data: { text, image } });
+      const r = await read({ data: { text, image, examples: guestExamplesFor("document", docQuestion) } });
       logAgentRun("reader", performance.now() - t0, r.ok);
-      if (r.ok) setDoc(r.doc); else setErr(r.error);
+      if (r.ok) { setDoc(r.doc); setLearning(r.learning); } else setErr(r.error);
     } catch { logAgentRun("reader", performance.now() - t0, false); setErr("The document could not be read just now. Try again in a moment."); }
     setBusy(false);
   };
@@ -149,6 +159,8 @@ export function DocumentReader({ desk = "Frontier desk" }: { desk?: string }) {
             </dl>
             <div><p className={LABEL}>Filings drafted</p><div className="mt-2 flex flex-wrap gap-2">{doc.filings.map((f) => <span key={f} className="bg-primary px-2 py-1 text-xs text-primary-foreground">{f}</span>)}</div></div>
             {doc.missing.length ? <div><p className={LABEL}>Still missing</p><ul className="mt-1 list-disc pl-5 text-sm">{doc.missing.map((m) => <li key={m}>{m}</li>)}</ul></div> : null}
+            <LearningNote learning={learning} />
+            <RateAnswer key={`${asked}-${doc.summary}`} agent="document" question={asked} answer={`Type: ${doc.documentType}. Route: ${doc.route}. Filings: ${doc.filings.join(", ") || "none"}. Missing: ${doc.missing.join(", ") || "none"}. ${doc.summary}`} />
           </div>
         ) : null}
       </div>

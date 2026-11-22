@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_feedback: {
+        Row: {
+          agent: string
+          answer: string
+          correction: string
+          created_at: string
+          id: string
+          question: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          answer: string
+          correction?: string
+          created_at?: string
+          id?: string
+          question: string
+          rating: number
+          user_id?: string
+        }
+        Update: {
+          agent?: string
+          answer?: string
+          correction?: string
+          created_at?: string
+          id?: string
+          question?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           audience: string

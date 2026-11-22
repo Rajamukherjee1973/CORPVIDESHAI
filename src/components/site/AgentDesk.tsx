@@ -9,6 +9,7 @@ import { integrationStatus } from "@/lib/agent-integration.functions";
 import { RAIL_CURRENCIES } from "@/lib/opi-signal";
 import { scenarioCurrency, useTreasuryScenario } from "@/lib/treasury-scenario";
 import { AgentArchitecture } from "@/components/site/AgentArchitecture";
+import { AgentTraining } from "@/components/site/AgentTraining";
 import { summariseRuns, useAgentRuns } from "@/lib/agent-session";
 
 export const AGENT_TABS = [
@@ -17,6 +18,7 @@ export const AGENT_TABS = [
   { id: "reader", n: "03", name: "Document reader", does: "Reads a board resolution or photo and lists the filings it triggers.", time: "~15 s", kind: "AI · vision" },
   { id: "outlook", n: "04", name: "Currency outlook", does: "Turns a live provider rate into conditional scenarios, allocation and hedge.", time: "~20 s", kind: "AI · live FX" },
   { id: "tools", n: "05", name: "Connected tools", does: "Runs the four read-only FX, market, statute and record functions the agents use.", time: "< 3 s", kind: "Server functions" },
+  { id: "training", n: "06", name: "Training loop", does: "Your ratings become worked examples for each agent, checked by an evaluation suite and exportable as a fine-tuning dataset.", time: "Instant", kind: "LangGraph mesh" },
 ] as const;
 export type AgentTab = (typeof AGENT_TABS)[number]["id"];
 export const isAgentTab = (v: unknown): v is AgentTab => AGENT_TABS.some((t) => t.id === v);
@@ -52,7 +54,7 @@ export function AgentDesk({ tab, onTab }: { tab: AgentTab; onTab: (t: AgentTab) 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule/20 px-4 py-2.5">
         <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           <span className={`mr-2 inline-block h-2 w-2 ${ai === false ? "bg-muted-foreground" : "bg-primary"}`} aria-hidden />
-          {ai === null ? "Checking agent service…" : ai ? "AI service connected · 4 AI agents + 4 read tools" : "AI service not configured — AI agents will show an error"}
+          {ai === null ? "Checking agent service…" : ai ? "AI service connected · 4 AI agents in one LangGraph mesh + 4 read tools" : "AI service not configured — AI agents will show an error"}
         </p>
         <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Scenario · {scenario.hub} · {ccy} · ₹{scenario.amountCr.toLocaleString("en-IN")} cr
@@ -66,7 +68,7 @@ export function AgentDesk({ tab, onTab }: { tab: AgentTab; onTab: (t: AgentTab) 
           </div>
         ))}
       </dl>
-      <div role="tablist" aria-label="Agents" className="grid grid-cols-2 gap-px bg-rule/20 sm:grid-cols-3 lg:grid-cols-5">
+      <div role="tablist" aria-label="Agents" className="grid grid-cols-2 gap-px bg-rule/20 sm:grid-cols-3 lg:grid-cols-6">
         {AGENT_TABS.map((t) => {
           const on = t.id === tab;
           return (
@@ -78,7 +80,7 @@ export function AgentDesk({ tab, onTab }: { tab: AgentTab; onTab: (t: AgentTab) 
               aria-selected={on}
               aria-controls="agent-panel"
               onClick={() => onTab(t.id)}
-              className={`p-3 text-left transition-colors last:col-span-2 lg:last:col-span-1 ${on ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted/60"}`}
+              className={`p-3 text-left transition-colors ${on ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted/60"}`}
             >
               <span className={`font-mono-ui text-[10px] tracking-[0.18em] ${on ? "" : "text-primary"}`}>{t.n} · {t.kind}</span>
               <span className="font-display mt-1 block text-lg leading-tight">{t.name}</span>
@@ -99,6 +101,7 @@ export function AgentDesk({ tab, onTab }: { tab: AgentTab; onTab: (t: AgentTab) 
         {tab === "reader" && <DocumentReader desk="Agent desk" />}
         {tab === "outlook" && <CurrencyOutlookAgent corridorCode={outlookCode} compact />}
         {tab === "tools" && <AgentIntegration compact />}
+        {tab === "training" && <AgentTraining onTab={onTab} />}
       </div>
       <p className="border-t border-rule/20 px-4 py-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
         Figures count real runs in this browser session only — not production metrics. Refreshing the page resets them.

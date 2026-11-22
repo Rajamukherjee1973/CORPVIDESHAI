@@ -1,9 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/langchain-ai/langgraph/main/libs/cli/schemas/schema.json",
   "node_version": "20",
-  "dependencies": ["."],
+  "dependencies": [
+    "."
+  ],
   "graphs": {
-    "statutory": "./src/lib/agents/platform-graph.server.ts:makeDeployedGraph"
+    "statutory": "./src/lib/agents/platform-graph.server.ts:makeDeployedGraph",
+    "mesh": "./src/lib/agents/platform-graph.server.ts:makeMeshGraph"
   },
   "env": [
     "LOVABLE_API_KEY",

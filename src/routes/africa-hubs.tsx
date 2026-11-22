@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Frame, Rule } from "@/components/site/Frame";
 import { AfricaHubs } from "@/components/site/AfricaHubs";
+import { HubPredictiveCompare } from "@/components/site/HubPredictiveCompare";
 
 const TITLE = "10 African Financial Hubs — SADC & COMESA Corridors | CorpVidesh AI";
 const DESC =
-  "Ten African financial hubs across the SADC and COMESA trade blocs, added beside the 52 global hubs: live rupee rates, India treaty status, exchanges and why Indian corporates invest there.";
+  "Ten African financial hubs across SADC and COMESA beside the 52 global hubs: live rupee rates, India treaty status and predictive comparison of cost, FX risk and route time.";
 
 export const Route = createFileRoute("/africa-hubs")({
   head: () => ({
@@ -42,6 +43,17 @@ function AfricaHubsPage() {
       </section>
       <section className="mx-auto max-w-[1400px] px-6 pb-16">
         <AfricaHubs />
+      </section>
+      <section className="mx-auto max-w-[1400px] px-6 pb-16">
+        <Rule label="Predictive comparison — African 10 against the global 52" />
+        <h2 className="font-display mb-3 max-w-4xl text-4xl lg:text-5xl">
+          Same model, same ticket. See where each African corridor ranks.
+        </h2>
+        <p className="mb-8 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          Switch between the African 10, either trade bloc or all 62 hubs. Cost, FX tail risk and route time are
+          forecast exactly as they are for the global hubs, so the comparison is like for like.
+        </p>
+        <HubPredictiveCompare defaultUniverse="africa" />
       </section>
     </Frame>
   );

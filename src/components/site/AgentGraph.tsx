@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { activeThread, buildContext, remember, recordEpisode } from "@/lib/agents/memory";
 import { logAgentRun } from "@/lib/agent-session";
+import { guestExamplesFor } from "@/lib/agent-training";
+import { LearningNote, RateAnswer } from "@/components/site/AgentLearning";
 
 const PRESETS: { label: string; q: string; ctx: string }[] = [
   {
@@ -50,7 +52,7 @@ export function AgentGraph() {
     setError(null);
     const t0 = performance.now();
     try {
-      const r = await run({ data: { question, context: [buildContext(activeThread()), context].filter(Boolean).join("\n").slice(0, 2400) } });
+      const r = await run({ data: { question, context: [buildContext(activeThread()), context].filter(Boolean).join("\n").slice(0, 2400), examples: guestExamplesFor("statutory", question) } });
       logAgentRun("graph", performance.now() - t0, Boolean(r.qaVerdict?.pass));
       setResult(r);
       setHistory((h) => [r, ...h].slice(0, 8));
@@ -224,6 +226,10 @@ export function AgentGraph() {
               <Field label="Forms" value={list(result.draft.forms)} />
               <Field label="Documents" value={list(result.draft.documents)} />
             </dl>
+            <div className="mt-5 space-y-2">
+              <LearningNote learning={result.learning} />
+              <RateAnswer key={result.runId} agent="statutory" question={result.question} answer={`Route: ${result.draft.route}. ${result.draft.determination} Basis: ${result.draft.statutory_basis.join(", ")}. Forms: ${result.draft.forms.join(", ")}.`} />
+            </div>
           </div>
           <div className="border border-border p-6">
             <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">

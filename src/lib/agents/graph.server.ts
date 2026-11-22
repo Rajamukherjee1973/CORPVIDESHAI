@@ -10,12 +10,11 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { AIMessageChunk, SystemMessage } from "@langchain/core/messages";
-import { ChatOpenAI } from "@langchain/openai";
+import type { ChatOpenAI } from "@langchain/openai";
 import { type CorpusDoc, CORPUS } from "./corpus";
 import { semanticRetrieve } from "./rag.server";
 import { validateQa } from "./execution";
-import { getRequest } from "@tanstack/react-start/server";
-import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId } from "@/lib/prediction-agent/run-id.server";
+import { AGENT_MODELS, chatModel, tracingConfig } from "./llm.server";
 import type {
   AgentNode,
   AgentRunResult,
@@ -25,25 +24,10 @@ import type {
 } from "./types";
 import { AGENT_LABEL } from "./types";
 
-const MODEL_ID = "google/gemini-3.7-flash";
+// NOTE: the model and gateway client come from the shared LangChain runtime (llm.server.ts).
+const MODEL_ID = AGENT_MODELS.statutory.model;
 const PRICE_IN = 0.075 / 1_000_000;
 const PRICE_OUT = 0.3 / 1_000_000;
-
-function makeModel(key: string) {
-  const correlation = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(getRequest()));
-  return new ChatOpenAI({
-    model: MODEL_ID,
-    apiKey: key,
-    temperature: 0.1,
-    maxRetries: 0,
-    streamUsage: true,
-    configuration: {
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      defaultHeaders: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "langchain" },
-      fetch: correlation.fetch,
-    },
-  });
-}
 
 type Usage = { prompt: number; completion: number };
 
@@ -107,6 +91,8 @@ function externalLookup(query: string): RetrievedChunk[] {
 const GraphState = Annotation.Root({
   question: Annotation<string>(),
   context: Annotation<string>(),
+  /** Reviewer-endorsed examples injected by the mesh's recall node; style references only. */
+  examples: Annotation<string>({ reducer: (_, b) => b, default: () => "" }),
   query: Annotation<string>(),
   chunks: Annotation<RetrievedChunk[]>({ reducer: (_, b) => b, default: () => [] }),
   grade: Annotation<string>({ reducer: (_, b) => b, default: () => "unknown" }),
@@ -148,8 +134,9 @@ function span(
   };
 }
 
-export function buildGraph(key: string) {
-  const model = makeModel(key);
+/** Compiles the statutory subgraph. The agent mesh (mesh.server.ts) runs it as one specialist node. */
+export function buildGraph() {
+  const model = chatModel("statutory");
 
   const coordinator = async (s: State) => {
     const t = Date.now();
@@ -251,8 +238,9 @@ export function buildGraph(key: string) {
     const { text, usage } = await runChain(
       model,
       "You are the filing agent of an Indian outbound-remittance rail. Using ONLY the passages, produce JSON: {\"determination\":\"one line\",\"route\":\"automatic|approval|not-applicable\",\"statutory_basis\":[\"...\"],\"forms\":[\"...\"],\"documents\":[\"...\"],\"checks\":[{\"check\":\"...\",\"regulator\":\"RBI|IFSCA|MoF|FIU-IND|DPIIT|CBDT\"}],\"narrative\":\"3 sentences for a treasury officer\"}. Never invent a provision that is not in the passages.",
-      "Question: {question}\nDeal context: {context}\n\nPassages:\n{ctx}\n\nQA feedback to fix (may be empty): {feedback}",
+      "Question: {question}\nDeal context: {context}\n\nPassages:\n{ctx}\n\n{examples}\n\nQA feedback to fix (may be empty): {feedback}",
       {
+        examples: s.examples || "",
         question: s.question,
         context: s.context || "none",
         ctx,
@@ -372,23 +360,13 @@ export function buildGraph(key: string) {
 export async function runAgentGraph(input: {
   question: string;
   context?: string;
+  examples?: string;
 }): Promise<AgentRunResult> {
-  const key = process.env["LOVABLE_API_KEY"];
   const runId = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  const lsKey = process.env["LANGSMITH_API_KEY"] || process.env["LANGCHAIN_API_KEY"];
-  const project = process.env["LANGSMITH_PROJECT"] || "corpvidesh-ai";
-
-  if (lsKey) {
-    process.env["LANGCHAIN_TRACING_V2"] = "true";
-    process.env["LANGCHAIN_API_KEY"] = lsKey;
-    process.env["LANGCHAIN_PROJECT"] = project;
-  }
-
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
-
-  const app = buildGraph(key);
+  const tracing = tracingConfig();
+  const app = buildGraph();
   const final = (await app.invoke(
-    { question: input.question, context: input.context ?? "", query: input.question },
+    { question: input.question, context: input.context ?? "", query: input.question, examples: input.examples ?? "" },
     { recursionLimit: 24, runName: "corpvidesh-statutory-graph", metadata: { runId } },
   )) as State;
 
@@ -417,6 +395,6 @@ export async function runAgentGraph(input: {
     },
     spans,
     totals,
-    tracing: { provider: lsKey ? "langsmith" : "local", project, enabled: Boolean(lsKey) },
+    tracing,
   };
 }

@@ -1,19 +1,25 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { AgentRunResult } from "@/lib/agents/types";
+import { ClientExamples } from "@/lib/agents/training";
 
 const Input = z.object({
   question: z.string().min(4).max(600),
   context: z.string().max(2400).default(""),
+  examples: ClientExamples,
 });
 
+/** Statutory graph, run as the "statutory" specialist of the LangGraph agent mesh. */
 export const runStatutoryGraph = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => Input.parse(data))
   .handler(async ({ data }): Promise<AgentRunResult> => {
-    const { runAgentGraph } = await import("@/lib/agents/graph.server");
+    const { runMesh } = await import("@/lib/agents/mesh.server");
     const { executeAgent } = await import("@/lib/agents/execution.server");
     return executeAgent("statutory", data.question,
-      (memory) => runAgentGraph({ question: data.question, context: [memory, data.context].filter(Boolean).join("\n").slice(0, 3800) }),
+      async (memory, viewer) => {
+        const { output, learning } = await runMesh({ agent: "statutory", question: data.question, context: data.context }, memory, viewer, data.examples);
+        return { ...output, learning };
+      },
       (result) => `${result.qaVerdict?.pass ? "QA passed" : "Human review required"}: ${result.draft?.determination ?? result.answer}`,
       (result) => Boolean(result.qaVerdict?.pass));
   });
