@@ -127,3 +127,12 @@ export function payoffCurve(c: Pick<ForwardContract, "side" | "notional" | "rate
 export function contractRef(year: number, code: string, seq: number): string {
   return `FWD-${year}-${code.toUpperCase()}-${String(Math.max(1, Math.floor(seq))).padStart(4, "0")}`;
 }
+
+/** Value a contract with policy rates when both exist; otherwise fall back to spot as a labelled proxy. */
+export function valueContract(c: ForwardContract, today: string, spotNow: number, rInrPct: number | undefined, rCcyPct: number | undefined): Valuation & { proxy: boolean } {
+  if (rInrPct == null || rCcyPct == null) {
+    const remainingDays = Math.max(0, daysBetween(today, c.maturityDate));
+    return { remainingDays, currentForward: spotNow, pnlInr: maturityPnl(c, spotNow), matured: remainingDays === 0, proxy: true };
+  }
+  return { ...markToMarket(c, today, spotNow, rInrPct, rCcyPct), proxy: false };
+}

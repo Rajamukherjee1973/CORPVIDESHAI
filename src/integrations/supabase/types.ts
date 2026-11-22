@@ -530,6 +530,107 @@ export type Database = {
         }
         Relationships: []
       }
+      hedge_contract_marks: {
+        Row: {
+          contract_id: string
+          created_at: string
+          current_forward: number
+          id: string
+          marked_on: string
+          matured: boolean
+          pnl_inr: number
+          proxy: boolean
+          source: string
+          spot: number
+          user_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          current_forward: number
+          id?: string
+          marked_on: string
+          matured?: boolean
+          pnl_inr: number
+          proxy?: boolean
+          source?: string
+          spot: number
+          user_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          current_forward?: number
+          id?: string
+          marked_on?: string
+          matured?: boolean
+          pnl_inr?: number
+          proxy?: boolean
+          source?: string
+          spot?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hedge_contract_marks_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "hedge_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hedge_contracts: {
+        Row: {
+          booked_at: string
+          code: string
+          fair_at_trade: number
+          id: string
+          margin_bp: number
+          maturity_date: string
+          notional: number
+          rate: number
+          rate_overridden: boolean
+          ref: string
+          side: string
+          spot_at_trade: number
+          trade_date: string
+          user_id: string
+        }
+        Insert: {
+          booked_at?: string
+          code: string
+          fair_at_trade: number
+          id?: string
+          margin_bp: number
+          maturity_date: string
+          notional: number
+          rate: number
+          rate_overridden?: boolean
+          ref: string
+          side: string
+          spot_at_trade: number
+          trade_date: string
+          user_id?: string
+        }
+        Update: {
+          booked_at?: string
+          code?: string
+          fair_at_trade?: number
+          id?: string
+          margin_bp?: number
+          maturity_date?: string
+          notional?: number
+          rate?: number
+          rate_overridden?: boolean
+          ref?: string
+          side?: string
+          spot_at_trade?: number
+          trade_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rbi_odi_releases: {
         Row: {
           checked_at: string

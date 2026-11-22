@@ -3,10 +3,11 @@ import { Download, FileSignature, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PolicyRate } from "@/lib/forward-pricing";
 import {
-  addDays, contractRef, markToMarket, maturityPnl, payoffCurve, quoteForward, validateTerms,
+  addDays, contractRef, maturityPnl, payoffCurve, quoteForward, validateTerms, valueContract,
   type ForwardContract, type ForwardSide,
 } from "@/lib/forward-contract";
 import { useForwardBook } from "@/lib/forward-book";
+import { HedgeAccountBar, HedgeHistory } from "@/components/site/HedgeBookAccount";
 
 const TENORS = [[30, "1M"], [91, "3M"], [182, "6M"], [365, "1Y"]] as const;
 const px = (v: number) => (v < 10 ? v.toFixed(4) : v.toFixed(2));
@@ -83,14 +84,13 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
     const s = spots[c.code];
     const ri = rates["INR"]?.ratePct, rc = rates[c.code]?.ratePct;
     if (!s || !today) return null;
-    if (ri == null || rc == null) return { remainingDays: Math.max(0, Math.round((Date.parse(c.maturityDate) - Date.parse(today)) / 864e5)), currentForward: s, pnlInr: maturityPnl(c, s), matured: false, proxy: true };
-    return { ...markToMarket(c, today, s, ri, rc), proxy: false };
+    return valueContract(c, today, s, ri, rc);
   };
   const rows = fb.contracts.map((c) => ({ c, v: value(c) }));
   const totalMtm = rows.reduce((s, r) => s + (r.v?.pnlInr ?? 0), 0);
   const totalScenario = rows.reduce((s, r) => s + (r.v ? maturityPnl(r.c, r.v.currentForward * (1 + (r.c.side === "buy" ? movePct : -movePct) / 100)) : 0), 0);
 
-  function book() {
+  async function book() {
     setNotice("");
     if (invalid) { setNotice(invalid); return; }
     if (!spot || !rate) { setNotice(`No live ${code} price yet${rates[code] ? "" : " and no official rate — type the rate your bank confirmed"}.`); return; }
@@ -98,8 +98,14 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
       ref: contractRef(Number(tradeDate.slice(0, 4)), code, fb.nextSeq), code, side, notional: terms.notional, tradeDate, maturityDate, marginBp,
       rate, fairAtTrade: quote?.fair ?? spot, spotAtTrade: spot, rateOverridden: overrideRate > 0, bookedAt: new Date().toISOString(),
     };
-    fb.book(c);
-    setNotice(`Booked ${c.ref} at ₹${px(rate)} — practice ticket only, no bank trade was placed.`);
+    try {
+      const ref = await fb.book(c);
+      setNotice(fb.mode === "account"
+        ? `Booked ${ref} at ₹${px(rate)} and saved to your account — indicative only, no bank trade was placed.`
+        : `Booked ${ref} at ₹${px(rate)} — practice ticket only, no bank trade was placed.`);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "The contract could not be saved. Please retry.");
+    }
   }
 
   function exportCsv() {
@@ -182,7 +188,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
             ))}
           </dl>
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={book}><FileSignature className="mr-1 h-4 w-4" />Book forward</Button>
+            <Button onClick={() => void book()} disabled={fb.saving}><FileSignature className="mr-1 h-4 w-4" />Book forward</Button>
             {(notice || invalid) && <p role="status" className={`text-xs ${notice.startsWith("Booked") ? "text-primary" : "text-muted-foreground"}`}>{notice || invalid}</p>}
           </div>
         </div>
@@ -199,11 +205,13 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
       </div>
 
       <div className="border-t border-rule/30">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+        <HedgeAccountBar mode={fb.mode} email={fb.email} />
+        {fb.loadError && <p role="alert" className="border-t border-rule/20 px-5 py-3 text-xs text-destructive">{fb.loadError}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rule/20 px-5 py-3">
           <div className="text-sm"><span className="text-muted-foreground">Booked contracts · </span>{fb.contracts.length}
             {fb.contracts.length > 0 && <> · <span className="text-muted-foreground">value today</span> <span className={`font-mono-ui ${tone(totalMtm)}`}>{inr(totalMtm)}</span> · <span className="text-muted-foreground">at maturity if the move is {movePct}% {movePct >= 0 ? "in" : "against"} each hedge's favour</span> <span className={`font-mono-ui ${tone(totalScenario)}`}>{inr(totalScenario)}</span></>}
           </div>
-          {fb.contracts.length > 0 && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-3.5 w-3.5" />CSV</Button><Button size="sm" variant="ghost" onClick={fb.clear}>Clear all</Button></div>}
+          {fb.contracts.length > 0 && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-3.5 w-3.5" />CSV</Button>{fb.clear && <Button size="sm" variant="ghost" onClick={fb.clear}>Clear all</Button>}</div>}
         </div>
         {fb.contracts.length === 0 ? (
           <p className="border-t border-rule/20 px-5 py-6 text-sm text-muted-foreground">{fb.ready ? "No contracts yet. Book one above to see it valued against the live rate." : "Loading your contracts…"}</p>
@@ -215,7 +223,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
               </thead>
               <tbody>
                 {rows.map(({ c, v }) => (
-                  <tr key={c.ref} className="border-t border-rule/20">
+                  <tr key={c.id ?? c.ref} className="border-t border-rule/20">
                     <td className="p-3 font-mono-ui text-xs">{c.ref}{c.rateOverridden && <span className="block text-[10px] text-muted-foreground">bank rate typed</span>}</td>
                     <td className="p-3 text-xs">{c.side === "buy" ? "Buy" : "Sell"} {c.code}</td>
                     <td className="p-3 text-right font-mono-ui">{(c.notional / 1e6).toLocaleString("en-IN", { maximumFractionDigits: 2 })}m</td>
@@ -223,14 +231,15 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
                     <td className="p-3 text-right font-mono-ui">₹{px(c.rate)}<span className="block text-[10px] text-muted-foreground">{c.marginBp} bp margin</span></td>
                     <td className="p-3 text-right font-mono-ui">{v ? `₹${px(v.currentForward)}` : "—"}{v?.proxy && <span className="block text-[10px] text-muted-foreground">spot proxy</span>}</td>
                     <td className={`p-3 text-right font-mono-ui ${tone(v?.pnlInr ?? 0)}`}>{v ? inr(v.pnlInr) : "—"}</td>
-                    <td className="p-3"><button type="button" aria-label={`Remove ${c.ref}`} onClick={() => fb.remove(c.ref)}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></button></td>
+                    <td className="p-3"><button type="button" aria-label={`Remove ${c.ref}`} onClick={() => { if (fb.mode === "local" || window.confirm(`Remove ${c.ref} and its saved profit/loss history?`)) fb.remove(c); }}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        <p className="border-t border-rule/20 px-5 py-3 text-[11px] leading-relaxed text-muted-foreground">Profit or loss today revalues each contract against the fair forward for its remaining days and discounts it at India's policy rate; on or after maturity it settles at spot. Contracts stay in this browser tab only. A real forward is dealt with an authorised dealer bank against an underlying exposure under its own documentation and quote.</p>
+        {fb.mode === "account" && <HedgeHistory marks={fb.marks} note={fb.markNote} />}
+        <p className="border-t border-rule/20 px-5 py-3 text-[11px] leading-relaxed text-muted-foreground">Profit or loss today revalues each contract against the fair forward for its remaining days and discounts it at India's policy rate; on or after maturity it settles at spot. {fb.mode === "account" ? "Saved contracts are visible only to your account." : "Contracts stay in this browser tab only."} A real forward is dealt with an authorised dealer bank against an underlying exposure under its own documentation and quote.</p>
       </div>
     </div>
   );

@@ -64,6 +64,7 @@ import { Route as ApiPublicFxRouteImport } from './routes/api/public/fx'
 import { Route as ApiPublicMarketsRouteImport } from './routes/api/public/markets'
 import { Route as ApiPublicMetalsRouteImport } from './routes/api/public/metals'
 import { Route as ApiPublicRbiRouteImport } from './routes/api/public/rbi'
+import { Route as ApiPublicJobsHedgeMarksRouteImport } from './routes/api/public/jobs/hedge-marks'
 import { Route as ApiPublicJobsRbiOdiSyncRouteImport } from './routes/api/public/jobs/rbi-odi-sync'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
@@ -343,6 +344,11 @@ const ApiPublicRbiRoute = ApiPublicRbiRouteImport.update({
   path: '/api/public/rbi',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicJobsHedgeMarksRoute = ApiPublicJobsHedgeMarksRouteImport.update({
+  id: '/api/public/jobs/hedge-marks',
+  path: '/api/public/jobs/hedge-marks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicJobsRbiOdiSyncRoute = ApiPublicJobsRbiOdiSyncRouteImport.update({
   id: '/api/public/jobs/rbi-odi-sync',
   path: '/api/public/jobs/rbi-odi-sync',
@@ -411,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/api/public/markets': typeof ApiPublicMarketsRoute
   '/api/public/metals': typeof ApiPublicMetalsRoute
   '/api/public/rbi': typeof ApiPublicRbiRoute
+  '/api/public/jobs/hedge-marks': typeof ApiPublicJobsHedgeMarksRoute
   '/api/public/jobs/rbi-odi-sync': typeof ApiPublicJobsRbiOdiSyncRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -470,6 +477,7 @@ export interface FileRoutesByTo {
   '/api/public/markets': typeof ApiPublicMarketsRoute
   '/api/public/metals': typeof ApiPublicMetalsRoute
   '/api/public/rbi': typeof ApiPublicRbiRoute
+  '/api/public/jobs/hedge-marks': typeof ApiPublicJobsHedgeMarksRoute
   '/api/public/jobs/rbi-odi-sync': typeof ApiPublicJobsRbiOdiSyncRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -530,6 +538,7 @@ export interface FileRoutesById {
   '/api/public/markets': typeof ApiPublicMarketsRoute
   '/api/public/metals': typeof ApiPublicMetalsRoute
   '/api/public/rbi': typeof ApiPublicRbiRoute
+  '/api/public/jobs/hedge-marks': typeof ApiPublicJobsHedgeMarksRoute
   '/api/public/jobs/rbi-odi-sync': typeof ApiPublicJobsRbiOdiSyncRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -591,6 +600,7 @@ export interface FileRouteTypes {
     | '/api/public/markets'
     | '/api/public/metals'
     | '/api/public/rbi'
+    | '/api/public/jobs/hedge-marks'
     | '/api/public/jobs/rbi-odi-sync'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -650,6 +660,7 @@ export interface FileRouteTypes {
     | '/api/public/markets'
     | '/api/public/metals'
     | '/api/public/rbi'
+    | '/api/public/jobs/hedge-marks'
     | '/api/public/jobs/rbi-odi-sync'
     | '/lovable/email/transactional/preview'
   id:
@@ -709,6 +720,7 @@ export interface FileRouteTypes {
     | '/api/public/markets'
     | '/api/public/metals'
     | '/api/public/rbi'
+    | '/api/public/jobs/hedge-marks'
     | '/api/public/jobs/rbi-odi-sync'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -769,6 +781,7 @@ export interface RootRouteChildren {
   ApiPublicMarketsRoute: typeof ApiPublicMarketsRoute
   ApiPublicMetalsRoute: typeof ApiPublicMetalsRoute
   ApiPublicRbiRoute: typeof ApiPublicRbiRoute
+  ApiPublicJobsHedgeMarksRoute: typeof ApiPublicJobsHedgeMarksRoute
   ApiPublicJobsRbiOdiSyncRoute: typeof ApiPublicJobsRbiOdiSyncRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -1160,6 +1173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRbiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/hedge-marks': {
+      id: '/api/public/jobs/hedge-marks'
+      path: '/api/public/jobs/hedge-marks'
+      fullPath: '/api/public/jobs/hedge-marks'
+      preLoaderRoute: typeof ApiPublicJobsHedgeMarksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/rbi-odi-sync': {
       id: '/api/public/jobs/rbi-odi-sync'
       path: '/api/public/jobs/rbi-odi-sync'
@@ -1233,6 +1253,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMarketsRoute: ApiPublicMarketsRoute,
   ApiPublicMetalsRoute: ApiPublicMetalsRoute,
   ApiPublicRbiRoute: ApiPublicRbiRoute,
+  ApiPublicJobsHedgeMarksRoute: ApiPublicJobsHedgeMarksRoute,
   ApiPublicJobsRbiOdiSyncRoute: ApiPublicJobsRbiOdiSyncRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
