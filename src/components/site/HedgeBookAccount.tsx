@@ -78,7 +78,7 @@ export function HedgeHistory({ marks, note }: { marks: HedgeMark[]; note: string
         <path d={d} fill="none" strokeWidth={2.2} className="stroke-foreground" />
         {pts.map((p, i) => <circle key={p.date} cx={X(i)} cy={Y(p.pnlInr)} r={3} className={p.pnlInr < 0 ? "fill-destructive" : "fill-foreground"}><title>{`${p.date}: ${inr(p.pnlInr)} across ${p.contracts} contract(s)`}</title></circle>)}
       </svg>
-      <p className="mt-1 text-[11px] text-muted-foreground">One mark per contract per day, recorded by the server from the live rupee feed and official policy rates (a daily job adds a mark even if you don't visit). Indicative fair values, not bank quotes. {note}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">One mark per contract per day, recorded by the server from the live rupee feed, the bank's current rate sheet for US dollars (else FBIL) and official policy rates (a daily job adds a mark even if you don't visit). Mid-market values, not a bank's unwind price. {note}</p>
     </div>
   );
 }

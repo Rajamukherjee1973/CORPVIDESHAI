@@ -48,6 +48,6 @@
 - All menus, page search and footer read `nav-data.ts`; keeps every page reachable.
 - /source reads GitHub via a server fn returning commit metadata only.
 - AI agent architecture rules live in src/lib/agents/AGENTS.md.
-- Currency-risk/hedge desk: pure `lib/fx-swings` on measured weekly series + feed anchor; hedge book session-only; USD forwards ≤12M: FBIL premia on live spot (`lib/fbil-forward`); else BIS-rate parity; benchmarks, never bank quotes.
+- Currency-risk/hedge desk: pure `lib/fx-swings` on measured weekly series + feed anchor; hedge book session-only; USD forwards: current desk-entered bank sheet (`lib/bank-forward`) first, then FBIL ≤12M, else BIS parity; never dealt trades.
 - /security: tabbed (?view=); Three.js loads in a browser effect; live checks are read-only signed-out probes; STRIDE rows say Enforced/Simulated/Not built, never certified.
 - Hedge contract builder (`lib/forward-contract`) and six-regulator desk (`lib/regulator-desk`) are pure modules; booked tickets: session-only signed out, owner-only saved with server daily marks signed in; desk signing keys and CVA file numbers are demos, never trades or RBI UINs.

@@ -6,6 +6,7 @@
  */
 import type { HedgePosition } from "@/lib/fx-swings";
 import { benchmarkForward, type FbilCurve } from "@/lib/fbil-forward";
+import { bankForwardFor, type BankSheet } from "@/lib/bank-forward";
 
 export const RATE_SOURCE = "BIS central bank policy rates (WS_CBPOL), daily, latest observation";
 export const MAX_RATE_AGE_DAYS = 400;
@@ -55,13 +56,14 @@ export function premiumPa(spot: number, forward: number, days: number): number {
   return (forward / spot - 1) * (365 / days);
 }
 
-export type CarryLine = { code: string; forward: number | null; premiumPa: number | null; carryCr: number; priced: boolean; proxyOf?: string; basis?: "fbil" | "parity" };
+export type CarryLine = { code: string; forward: number | null; premiumPa: number | null; carryCr: number; priced: boolean; proxyOf?: string; basis?: "bank" | "fbil" | "parity" };
 
 /**
  * Carry of hedging foreign holdings by selling the currency forward. Positive
  * carry is earned (forward above spot), negative is a cost. A bank margin, in
- * fraction a year, always reduces carry. USD uses the FBIL benchmark curve when
- * supplied and covering the horizon. Unpriced currencies use `fallbackCostPa`.
+ * fraction a year, always reduces carry. USD uses the bank sheet's buy rate when
+ * a current sheet is supplied (its spread is the margin, so none is added), else
+ * the FBIL benchmark curve. Unpriced currencies use `fallbackCostPa`.
  */
 export function hedgeCarry(
   positions: HedgePosition[],
@@ -71,6 +73,7 @@ export function hedgeCarry(
   marginPa: number,
   fallbackCostPa: number,
   usdCurve?: FbilCurve | null,
+  usdBank?: BankSheet | null,
 ): { lines: CarryLine[]; netCr: number } {
   const days = Math.round(weeks * 7);
   const inr = rates["INR"];
@@ -78,6 +81,11 @@ export function hedgeCarry(
     const hedged = Math.max(0, p.exposureCr) * Math.min(1, Math.max(0, p.hedgeRatio));
     const spot = spots[p.code];
     const r = rates[p.code];
+    const bq = p.code === "USD" && usdBank && spot ? bankForwardFor(usdBank, spot, days) : null;
+    if (bq && spot) {
+      const prem = premiumPa(spot, bq.bid, days);
+      return { code: p.code, forward: bq.bid, premiumPa: prem, carryCr: hedged * prem * (weeks / 52), priced: true, basis: "bank" };
+    }
     const fb = p.code === "USD" && usdCurve && spot ? benchmarkForward(spot, usdCurve, days) : null;
     if (fb != null && spot) {
       const prem = premiumPa(spot, fb, days);

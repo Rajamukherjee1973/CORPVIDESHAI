@@ -11,6 +11,8 @@ import { HUB_CCYS, useMeasuredFxRisk } from "@/lib/use-fx-risk";
 import { useHedgeBook } from "@/lib/hedge-book";
 import { useFxStream } from "@/lib/fx-stream";
 import { ForwardContractBuilder } from "@/components/site/ForwardContractBuilder";
+import { BankRateSheet } from "@/components/site/BankRateSheet";
+import { useBankSheet } from "@/lib/use-bank-sheet";
 
 const HORIZONS = [[4, "1 month"], [13, "3 months"], [26, "6 months"], [52, "1 year"]] as const;
 const cr = (v: number) => `${v < 0 ? "−" : ""}₹${Math.abs(v).toFixed(2)} cr`;
@@ -54,6 +56,8 @@ export function HedgeDesk() {
   const rates = rq.data?.rates ?? {};
   const fq = useQuery({ queryKey: ["fbil-forward-premia"], queryFn: () => fbilForwardPremia(), staleTime: 3 * 60 * 60 * 1000, retry: 1 });
   const usdCurve = fq.data?.curve ?? null;
+  const bank = useBankSheet();
+  const usdBank = bank.sheet;
   const [shock, setShock] = useState(-5);
   const [addCcy, setAddCcy] = useState("EUR");
   const [addCr, setAddCr] = useState(100);
@@ -62,7 +66,7 @@ export function HedgeDesk() {
   const vols = q.data?.vols ?? {};
   const risk = useMemo(() => bookRisk(book, series, horizon), [book, series, horizon]);
   const spots = tape.anchorInrPer;
-  const carry = hedgeCarry(book, spots, rates, horizon, marginBp / 10_000, fallback / 100, usdCurve);
+  const carry = hedgeCarry(book, spots, rates, horizon, marginBp / 10_000, fallback / 100, usdCurve, usdBank);
   const cost = -carry.netCr;
   const lineFor = (code: string) => carry.lines.find((l) => l.code === code);
   const pnl = shockPnl(book, shock / 100);
@@ -71,8 +75,8 @@ export function HedgeDesk() {
   const frontier = useMemo(() => Array.from({ length: 11 }, (_, i) => {
     const h = i / 10;
     const b = book.map((p) => ({ ...p, hedgeRatio: h }));
-    return { h, risk: bookRisk(b, series, horizon)?.hedgedVar ?? 0, cost: -hedgeCarry(b, spots, rates, horizon, marginBp / 10_000, fallback / 100, usdCurve).netCr };
-  }), [book, series, horizon, spots, rates, marginBp, fallback, usdCurve]);
+    return { h, risk: bookRisk(b, series, horizon)?.hedgedVar ?? 0, cost: -hedgeCarry(b, spots, rates, horizon, marginBp / 10_000, fallback / 100, usdCurve, usdBank).netCr };
+  }), [book, series, horizon, spots, rates, marginBp, fallback, usdCurve, usdBank]);
 
   const update = (i: number, patch: Partial<HedgePosition>) => setBook(book.map((p, k) => (k === i ? { ...p, ...patch } : p)));
   const applyPolicy = () => setBook(book.map((p) => (vols[p.code] ? { ...p, hedgeRatio: policyRatio(vols[p.code]!.vol).ratio } : p)));
@@ -83,7 +87,7 @@ export function HedgeDesk() {
       title: "CorpVidesh AI hedge desk memo (illustrative, not advice)",
       generatedAt: new Date().toISOString(),
       horizonWeeks: horizon,
-      forwardPricing: { method: "USD: FBIL USD/INR forward premia on live spot (up to 12 months); others: covered interest parity on official policy rates", source: RATE_SOURCE, fbil: usdCurve ? { source: FBIL_SOURCE, asOf: usdCurve.asOf, points: usdCurve.points } : { error: fq.data?.error ?? "not loaded" }, inrRate: rates["INR"] ?? null, bankMarginPa: marginBp / 10_000, fallbackCostPaForUnpriced: fallback / 100, lines: carry.lines, netCarryCr: carry.netCr },
+      forwardPricing: { method: "USD: the bank's current daily rate sheet scaled to live spot when entered, else FBIL USD/INR forward premia on live spot (up to 12 months); others: covered interest parity on official policy rates", source: RATE_SOURCE, bankSheet: usdBank ? { bank: usdBank.bankName, quoteDate: usdBank.quoteDate, spotDate: usdBank.spotDate, spotBid: usdBank.spotBid, spotAsk: usdBank.spotAsk, points: usdBank.points } : null, fbil: usdCurve ? { source: FBIL_SOURCE, asOf: usdCurve.asOf, points: usdCurve.points } : { error: fq.data?.error ?? "not loaded" }, inrRate: rates["INR"] ?? null, bankMarginPa: marginBp / 10_000, fallbackCostPaForUnpriced: fallback / 100, lines: carry.lines, netCarryCr: carry.netCr },
       positions: book.map((p) => ({ ...p, liveInrPerUnit: tape.anchorInrPer[p.code] ?? null, measuredVol: vols[p.code]?.vol ?? null, policy: vols[p.code] ? policyRatio(vols[p.code]!.vol) : null })),
       risk,
       hedgeNetCostCr: cost,
@@ -126,7 +130,7 @@ export function HedgeDesk() {
           { k: "Bad case, no hedges", v: risk ? cr(-risk.unhedgedVar) : "—", n: "1 in 20 chance of worse", c: "text-destructive" },
           { k: "Bad case, with your hedges", v: risk ? cr(-risk.hedgedVar) : "—", n: `${Math.round(avgHedge * 100)}% of ₹${gross.toFixed(0)} cr covered`, c: "" },
           { k: "Risk removed", v: risk ? `${Math.round(removed * 100)}%` : "—", n: "of the bad-case loss", c: "text-primary" },
-          { k: carry.netCr >= 0 ? "Forwards earn you" : "Forwards cost you", v: cr(Math.abs(carry.netCr)), n: `${carry.lines.filter((l) => l.priced).length} of ${carry.lines.length} priced from FBIL or official rates`, c: carry.netCr >= 0 ? "text-primary" : "" },
+          { k: carry.netCr >= 0 ? "Forwards earn you" : "Forwards cost you", v: cr(Math.abs(carry.netCr)), n: `${carry.lines.filter((l) => l.priced).length} of ${carry.lines.length} priced from ${usdBank ? "the bank sheet, " : ""}FBIL or official rates`, c: carry.netCr >= 0 ? "text-primary" : "" },
           { k: "Spread across currencies saves", v: risk ? cr(risk.diversification) : "—", n: "vs adding each one up", c: "" },
         ].map((x) => (
           <div key={x.k} className="bg-background p-4">
@@ -163,7 +167,7 @@ export function HedgeDesk() {
                   <td className="p-3 text-right font-mono-ui">{(() => {
                     const l = lineFor(p.code);
                     if (!l?.priced || l.forward == null || l.premiumPa == null) return <span className="text-xs text-muted-foreground" title="No official policy rate in the source; the fallback cost applies">{rq.isPending ? "…" : "no official rate"}</span>;
-                    return <span title={l.proxyOf ? `Pegged: uses the ${l.proxyOf} policy rate` : undefined}>₹{l.forward < 10 ? l.forward.toFixed(3) : l.forward.toFixed(2)}<span className={`block text-[10px] ${l.premiumPa >= 0 ? "text-primary" : "text-destructive"}`}>{l.premiumPa >= 0 ? "+" : ""}{(l.premiumPa * 100).toFixed(2)}% a yr{l.proxyOf ? ` · ${l.proxyOf} peg` : ""}{l.basis === "fbil" ? " · FBIL" : ""}</span></span>;
+                    return <span title={l.proxyOf ? `Pegged: uses the ${l.proxyOf} policy rate` : undefined}>₹{l.forward < 10 ? l.forward.toFixed(3) : l.forward.toFixed(2)}<span className={`block text-[10px] ${l.premiumPa >= 0 ? "text-primary" : "text-destructive"}`}>{l.premiumPa >= 0 ? "+" : ""}{(l.premiumPa * 100).toFixed(2)}% a yr{l.proxyOf ? ` · ${l.proxyOf} peg` : ""}{l.basis === "fbil" ? " · FBIL" : l.basis === "bank" ? " · bank buy rate" : ""}</span></span>;
                   })()}</td>
                   <td className="p-3 text-right font-mono-ui">{v != null ? `${(v * 100).toFixed(1)}%` : "n/a"}</td>
                   <td className="p-3">{pol ? <button type="button" onClick={() => update(i, { hedgeRatio: pol.ratio })} className="text-xs text-primary hover:underline">{pol.band}: use {Math.round(pol.ratio * 100)}%</button> : "—"}</td>
@@ -183,8 +187,11 @@ export function HedgeDesk() {
         </div>
       </div>
 
+      <BankRateSheet bank={bank} spot={spots["USD"]} />
+
       <ForwardContractBuilder
         spots={spots}
+        usdBank={usdBank}
         rates={rates}
         currencies={[...new Set([...book.map((p) => p.code), ...HUB_CCYS, "EUR", "JPY", "CHF"])].filter((c) => c !== "INR").sort()}
         defaultMarginBp={marginBp}
@@ -238,7 +245,7 @@ export function HedgeDesk() {
       )}
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Illustrative risk desk. Losses use a year of weekly rupee reference rates ({q.data?.asOf ? `to ${q.data.asOf}` : "loading"}) and how the currencies moved together; spot comes from the 60-second interbank feed. US dollar forwards up to 12 months add {FBIL_SOURCE}{usdCurve ? ` of ${usdCurve.asOf}` : " (unavailable right now)"} to live spot; FBIL computes these from banks' interbank forward quotes, and the public release is delayed. Other forward prices are worked out from today's spot and the official central bank rates of India{rates["INR"] ? ` (${rates["INR"].ratePct}% on ${rates["INR"].date})` : ""} and each currency's country ({RATE_SOURCE}). That is the fair price before your bank's margin, not a bank's dealable quote; banks price off money-market rates that can differ. {rq.data?.error ?? ""} The cover rule is an example, and nothing here books, quotes or recommends a hedge — forwards are arranged with an authorised dealer bank under its own documentation. Your book stays in this browser tab only.
+        Illustrative risk desk. Losses use a year of weekly rupee reference rates ({q.data?.asOf ? `to ${q.data.asOf}` : "loading"}) and how the currencies moved together; spot comes from the 60-second interbank feed. {usdBank ? `US dollar forwards use ${usdBank.bankName}'s rate sheet of ${usdBank.quoteDate}, moved in line with live spot, where it covers the tenor; otherwise they add` : "US dollar forwards up to 12 months add"} {FBIL_SOURCE}{usdCurve ? ` of ${usdCurve.asOf}` : " (unavailable right now)"} to live spot; FBIL computes these from banks' interbank forward quotes, and the public release is delayed. Other forward prices are worked out from today's spot and the official central bank rates of India{rates["INR"] ? ` (${rates["INR"].ratePct}% on ${rates["INR"].date})` : ""} and each currency's country ({RATE_SOURCE}). That is the fair price before your bank's margin, not a bank's dealable quote; banks price off money-market rates that can differ. {rq.data?.error ?? ""} The cover rule is an example, and nothing here books, quotes or recommends a hedge — forwards are arranged with an authorised dealer bank under its own documentation. Your book stays in this browser tab only.
       </p>
     </div>
   );

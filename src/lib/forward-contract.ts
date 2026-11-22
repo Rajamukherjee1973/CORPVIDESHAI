@@ -8,12 +8,19 @@
  */
 import { forwardRate } from "@/lib/forward-pricing";
 import { benchmarkForward, type FbilCurve } from "@/lib/fbil-forward";
+import { bankForwardFor, type BankSheet } from "@/lib/bank-forward";
 
-/** fbil = FBIL USD/INR premia on live spot; parity = covered interest parity on policy rates; spot = labelled proxy. */
-export type FairBasis = "fbil" | "parity";
+/** bank = the bank's daily rate sheet scaled to live spot; fbil = FBIL USD/INR premia on live spot; parity = covered interest parity on policy rates. */
+export type FairBasis = "bank" | "fbil" | "parity";
 
-/** Fair (no-margin) forward for `days`: the FBIL benchmark when supplied and covering the tenor, else covered parity. */
-export function fairForward(spot: number, days: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null): { fair: number; basis: FairBasis } | null {
+/**
+ * Fair forward for `days`: the bank sheet's mid when supplied and covering the
+ * tenor, else the FBIL benchmark, else covered parity. Pass a bank sheet only
+ * for USD and only while it is current.
+ */
+export function fairForward(spot: number, days: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null, bank?: BankSheet | null): { fair: number; basis: FairBasis; bid?: number; ask?: number } | null {
+  const q = bank ? bankForwardFor(bank, spot, days) : null;
+  if (q) return { fair: q.mid, basis: "bank", bid: q.bid, ask: q.ask };
   const b = benchmark ? benchmarkForward(spot, benchmark, days) : null;
   if (b != null) return { fair: b, basis: "fbil" };
   if (rInrPct == null || rCcyPct == null || !(spot > 0)) return null;
@@ -72,6 +79,8 @@ export type Quote = {
   premiumPa: number;
   inrCr: number;
   basis: FairBasis;
+  /** Bank sheet buy/sell for this tenor when basis is "bank". */
+  bank?: { bid: number; ask: number };
 };
 
 export type QuoteInput = { side: ForwardSide; notional: number; tradeDate: string; maturityDate: string; marginBp: number };
@@ -89,13 +98,19 @@ export function validateTerms(t: QuoteInput): string | null {
 
 /**
  * Indicative contract rate. The bank margin always works against the customer:
- * a buyer pays above the fair forward, a seller receives below it.
+ * a buyer pays above the fair forward, a seller receives below it. From a bank
+ * sheet the customer gets the bank's sell rate when buying and its buy rate when
+ * selling; the sheet's spread already is the bank's margin, so none is added.
  */
-export function quoteForward(t: QuoteInput, spot: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null): Quote | null {
+export function quoteForward(t: QuoteInput, spot: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null, bank?: BankSheet | null): Quote | null {
   if (validateTerms(t) || !(spot > 0)) return null;
   const days = daysBetween(t.tradeDate, t.maturityDate);
-  const f = fairForward(spot, days, rInrPct, rCcyPct, benchmark);
+  const f = fairForward(spot, days, rInrPct, rCcyPct, benchmark, bank);
   if (!f) return null;
+  if (f.basis === "bank" && f.bid != null && f.ask != null) {
+    const rate = t.side === "buy" ? f.ask : f.bid;
+    return { days, fair: f.fair, rate, marginPerUnit: Math.abs(rate - f.fair), premiumPa: (f.fair / spot - 1) * (365 / days), inrCr: (t.notional * rate) / 1e7, basis: "bank", bank: { bid: f.bid, ask: f.ask } };
+  }
   const m = marginPerUnit(spot, t.marginBp, days);
   const rate = t.side === "buy" ? f.fair + m : f.fair - m;
   return { days, fair: f.fair, rate, marginPerUnit: m, premiumPa: (f.fair / spot - 1) * (365 / days), inrCr: (t.notional * rate) / 1e7, basis: f.basis };
@@ -124,9 +139,9 @@ export type Valuation = {
  * fair forward for the remaining days, discounted at the INR rate; on or after
  * maturity it settles against spot.
  */
-export function markToMarket(c: ForwardContract, today: string, spotNow: number, rInrPct: number, rCcyPct: number, benchmark?: FbilCurve | null): Valuation {
+export function markToMarket(c: ForwardContract, today: string, spotNow: number, rInrPct: number, rCcyPct: number, benchmark?: FbilCurve | null, bank?: BankSheet | null): Valuation {
   const remainingDays = daysBetween(today, c.maturityDate);
-  return revalue(c, remainingDays, spotNow, rInrPct, remainingDays > 0 ? fairForward(spotNow, remainingDays, rInrPct, rCcyPct, benchmark) : null);
+  return revalue(c, remainingDays, spotNow, rInrPct, remainingDays > 0 ? fairForward(spotNow, remainingDays, rInrPct, rCcyPct, benchmark, bank) : null);
 }
 
 function revalue(c: ForwardContract, remainingDays: number, spotNow: number, rInrPct: number, f: { fair: number; basis: FairBasis } | null): Valuation {
@@ -150,13 +165,13 @@ export function contractRef(year: number, code: string, seq: number): string {
 }
 
 /**
- * Value a contract from the FBIL benchmark (USD, when supplied) or policy-rate
- * parity, discounted at India's policy rate; without those, fall back to spot
- * as a labelled proxy.
+ * Value a contract from the bank sheet mid or FBIL benchmark (USD, when
+ * supplied) or policy-rate parity, discounted at India's policy rate; without
+ * those, fall back to spot as a labelled proxy.
  */
-export function valueContract(c: ForwardContract, today: string, spotNow: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null): Valuation & { proxy: boolean } {
+export function valueContract(c: ForwardContract, today: string, spotNow: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null, bank?: BankSheet | null): Valuation & { proxy: boolean } {
   const remainingDays = daysBetween(today, c.maturityDate);
-  const f = rInrPct != null && remainingDays > 0 ? fairForward(spotNow, remainingDays, rInrPct, rCcyPct, benchmark) : null;
+  const f = rInrPct != null && remainingDays > 0 ? fairForward(spotNow, remainingDays, rInrPct, rCcyPct, benchmark, bank) : null;
   if (rInrPct == null || (remainingDays > 0 && !f)) {
     const left = Math.max(0, remainingDays);
     return { remainingDays: left, currentForward: spotNow, pnlInr: maturityPnl(c, spotNow), matured: left === 0, proxy: true, basis: "spot" };

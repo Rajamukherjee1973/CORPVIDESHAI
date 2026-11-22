@@ -86,6 +86,63 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_forward_sheets: {
+        Row: {
+          bank_name: string
+          created_at: string
+          entered_by: string
+          id: string
+          note: string
+          points: Json
+          quote_date: string
+          spot_ask: number
+          spot_bid: number
+          spot_date: string
+        }
+        Insert: {
+          bank_name: string
+          created_at?: string
+          entered_by?: string
+          id?: string
+          note?: string
+          points: Json
+          quote_date: string
+          spot_ask: number
+          spot_bid: number
+          spot_date: string
+        }
+        Update: {
+          bank_name?: string
+          created_at?: string
+          entered_by?: string
+          id?: string
+          note?: string
+          points?: Json
+          quote_date?: string
+          spot_ask?: number
+          spot_bid?: number
+          spot_date?: string
+        }
+        Relationships: []
+      }
+      bank_quote_desk_members: {
+        Row: {
+          granted_at: string
+          note: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          note?: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          note?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           audience: string
@@ -685,12 +742,27 @@ export type Database = {
       }
       has_filing_company: { Args: { _company: string }; Returns: boolean }
       has_filing_company_assignment: { Args: never; Returns: boolean }
+      is_bank_quote_desk: { Args: { _uid: string }; Returns: boolean }
       is_filing_regulator: { Args: never; Returns: boolean }
       is_public_filing_demo: { Args: { _uid: string }; Returns: boolean }
       is_public_gift_demo: { Args: { _uid: string }; Returns: boolean }
       open_gift_case: {
         Args: { p_case: Json; p_documents: string[] }
         Returns: string
+      }
+      recent_bank_forward_sheets: {
+        Args: { _limit?: number }
+        Returns: {
+          bank_name: string
+          created_at: string
+          id: string
+          note: string
+          points: Json
+          quote_date: string
+          spot_ask: number
+          spot_bid: number
+          spot_date: string
+        }[]
       }
     }
     Enums: {
