@@ -41,11 +41,11 @@
 - Public GIFT showcase credentials belong only to newly provisioned public_demo desks; restrictive RLS separates their cases from private desks and denies fund/Form FC access, while the existing workflow still validates every review.
 - Public regulator-portal showcase desks are flagged in their portal role; restrictive RLS keeps showcase Form FC records and append-only regulator actions separate from private filings.
 - The site-wide copyright notice lives once in the shared Frame footer (padded above the fixed FX strip) so every page carries it without per-route copies.
-- /agents is the single compact agent desk: each agent/read tool is a ?agent= tab on shared panels; impact figures count only real current-session runs.
+- /agents is the one agent desk: each agent/tool is a ?agent= tab; impact counts only real session runs.
 - Demo bookings: validated public server fn writes to an RLS-locked table; no client read path.
-- Why-page ODI sector chart reads one sourced data module; years lacking an official sector table stay total-only, never estimated.
-- Extra hub groups join scenario pickers via `hub-catalog` (`findHub`); `HUBS` stays the fixed global set so count copy stays true.
-- Cross-hub comparisons run `forecastAll` per hub through pure `lib/hub-compare` with one shared case input and printed score weights; keeps global and African hubs like-for-like and reproducible.
-- Header menus, phone menu, Ctrl K page search and footer directory all read `nav-data.ts`; one list keeps every page reachable.
-- /source reads GitHub via a server fn returning parsed commit metadata only; key stays server-side.
+- Why-page ODI chart reads one sourced module; years without official sector data stay total-only.
+- Extra hub groups join pickers via `hub-catalog` (`findHub`); `HUBS` stays the fixed 52.
+- Hub comparisons: pure `lib/hub-compare` runs `forecastAll` per hub with one case input, printed weights and realised vol from one INR snapshot source (`fx-risk`, labelled fallback); keeps hubs like-for-like.
+- All menus, page search and footer read `nav-data.ts`; keeps every page reachable.
+- /source reads GitHub via a server fn returning commit metadata only.
 - AI agent architecture rules live in src/lib/agents/AGENTS.md.

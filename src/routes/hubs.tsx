@@ -69,7 +69,7 @@ function Hubs() {
       </section>
 
       <section className="mx-auto max-w-[1400px] px-6 pb-12">
-        <ForecastLede desk="Hub atlas" focus={["drift", "cost"]} />
+        <ForecastLede desk="Hub atlas" focus={["drift", "cost"]} measuredRisk />
       </section>
 
       <section className="mx-auto max-w-[1400px] px-6 pb-16">

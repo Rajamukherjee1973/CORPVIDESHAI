@@ -14,6 +14,7 @@ import { findHub } from "@/data/hub-catalog";
 import { COUNTRY_META } from "@/data/currencies";
 import { forecastAll, verdict, type Forecast, type RouteKind } from "@/lib/predict";
 import { inrPer, useLiveFeed } from "@/lib/live-feed";
+import { useMeasuredFxRisk } from "@/lib/use-fx-risk";
 
 type Props = {
   /** Desk label, used in the reference line. */
@@ -29,6 +30,8 @@ type Props = {
   firstTimeFiler?: boolean;
   netWorthCr?: number;
   committedCr?: number;
+  /** Use currency volatility measured from real exchange rates (hub pages). */
+  measuredRisk?: boolean;
 };
 
 const SEV: Record<Forecast["severity"], string> = {
@@ -57,11 +60,14 @@ export function ForecastLede({
   firstTimeFiler = false,
   netWorthCr = 42000,
   committedCr = 9800,
+  measuredRisk = false,
 }: Props) {
   const feed = useLiveFeed();
   const hub = useMemo(() => findHub(hubCity) ?? HUBS[0], [hubCity]);
   const code = hub ? COUNTRY_META[hub.country]?.currency ?? "USD" : "USD";
   const rate = inrPer(feed, code);
+  const risk = useMeasuredFxRisk(measuredRisk);
+  const measuredVol = measuredRisk ? (risk.data?.vols[code] ?? null) : null;
 
   const all = useMemo(
     () =>
@@ -77,10 +83,11 @@ export function ForecastLede({
           rateRef: rate ? rate * 0.994 : null,
           netWorthCr,
           committedCr,
+          measuredVol,
         },
         code,
       ) : [],
-    [hub, notionalCr, route, docsReady, firstTimeFiler, section195, rate, code, netWorthCr, committedCr],
+    [hub, notionalCr, route, docsReady, firstTimeFiler, section195, rate, code, netWorthCr, committedCr, measuredVol],
   );
 
   const shown = focus

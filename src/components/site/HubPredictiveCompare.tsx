@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { HUB_CCYS, useMeasuredFxRisk } from "@/lib/use-fx-risk";
+import { FX_RISK_METHOD, FX_RISK_SOURCE } from "@/lib/fx-risk";
 import { ArrowRight, Check, Pin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { flag, COUNTRY_META } from "@/data/currencies";
@@ -28,6 +30,7 @@ const UNIVERSES: HubUniverse[] = ["all", "global", "africa", "SADC", "COMESA"];
 const ROUTES: RouteKind[] = ["ODI", "OPI", "Approval"];
 const FORECAST_ORDER = ["clearance", "cost", "drift", "rework"] as const;
 const MAX_PINS = 3;
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 const sevClass = { clear: "text-primary", watch: "text-foreground", act: "text-destructive" } as const;
 
@@ -93,11 +96,14 @@ export function HubPredictiveCompare({ defaultUniverse = "all" }: { defaultUnive
   const [firstTime, setFirstTime] = useState(false);
   const [sort, setSort] = useState<SortKey>("score");
   const [userPins, setPins] = useState<string[] | null>(null);
+  const risk = useMeasuredFxRisk();
+  const vols = risk.data?.vols;
+  const measuredCount = vols ? Object.keys(vols).length : 0;
   const route: RouteKind = routeOverride ?? (scenario.purpose.startsWith("OPI") ? "OPI" : "ODI");
 
   const rows = useMemo(
-    () => compareHubs(hubsIn(universe), { notionalCr: scenario.amountCr, route, docsReady, firstTimeFiler: firstTime, section195: s195, inrPer: fx.inrPer }),
-    [universe, scenario.amountCr, route, docsReady, firstTime, s195, fx.inrPer],
+    () => compareHubs(hubsIn(universe), { notionalCr: scenario.amountCr, route, docsReady, firstTimeFiler: firstTime, section195: s195, inrPer: fx.inrPer, vols }),
+    [universe, scenario.amountCr, route, docsReady, firstTime, s195, fx.inrPer, vols],
   );
   const groups = useMemo(() => summariseGroups(rows), [rows]);
   const sorted = useMemo(() => {
@@ -172,6 +178,23 @@ export function HubPredictiveCompare({ defaultUniverse = "all" }: { defaultUnive
             Same case, same model, every hub. Ticket follows the shared treasury scenario.
           </p>
         </div>
+      </div>
+
+      {/* Currency-risk provenance */}
+      <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 border border-border px-4 py-2.5 text-xs" role="status" aria-live="polite">
+        <span className={`font-mono-ui text-[10px] uppercase tracking-[0.16em] ${risk.data && !risk.data.error ? "text-primary" : "text-muted-foreground"}`}>
+          Currency risk · {risk.isPending ? "measuring…" : risk.data && !risk.data.error ? "measured from real rates" : "measurement unavailable"}
+        </span>
+        <span className="text-muted-foreground">
+          {risk.isPending
+            ? "Fetching a year of INR exchange rates. Until it arrives, FX tails use labelled assumptions."
+            : risk.data && !risk.data.error
+              ? `${measuredCount} of ${HUB_CCYS.length} currencies · ${FX_RISK_METHOD} · rates to ${risk.data.asOf ?? "—"} · ${FX_RISK_SOURCE}${risk.data.missing.length ? ` · not measurable: ${risk.data.missing.join(", ")} (assumed, marked)` : ""}`
+              : `${risk.data?.error ?? "The rate source did not respond."} FX tails use labelled assumptions until it recovers.`}
+        </span>
+        {!risk.isPending && (risk.isError || risk.data?.error) && (
+          <Button size="sm" variant="outline" className="h-7 rounded-none" onClick={() => void risk.refetch()}>Retry</Button>
+        )}
       </div>
 
       {/* Lead read + group comparison */}
@@ -259,6 +282,10 @@ export function HubPredictiveCompare({ defaultUniverse = "all" }: { defaultUnive
                         );
                       })}
                       <div className="flex items-baseline justify-between gap-2 border-b border-border pb-1">
+                        <dt className="text-muted-foreground">{r.ccy} volatility vs ₹</dt>
+                        <dd className="tnum font-medium">{pct(r.vol)} <span className="font-mono-ui text-[9px] uppercase text-muted-foreground">{r.volSource}</span></dd>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2 border-b border-border pb-1">
                         <dt className="text-muted-foreground">Paper route today</dt><dd className="tnum font-medium">{r.legacyDays} days</dd>
                       </div>
                       <div className="flex items-baseline justify-between gap-2">
@@ -313,7 +340,7 @@ export function HubPredictiveCompare({ defaultUniverse = "all" }: { defaultUnive
                     <div className="flex items-center gap-2"><div className="h-1.5 w-16 bg-secondary"><div className="h-full bg-primary" style={{ width: `${r.score}%` }} /></div><span className="tnum font-medium">{r.score}</span></div>
                   </td>
                   <td className="tnum px-3 py-2">{r.costBps} bps</td>
-                  <td className="tnum px-3 py-2">₹{r.driftP90Cr} cr <span className="text-xs text-muted-foreground">({r.driftPct}%)</span></td>
+                  <td className="tnum px-3 py-2">₹{r.driftP90Cr} cr <span className="text-xs text-muted-foreground">({r.driftPct}%)</span><span className={`block font-mono-ui text-[9px] uppercase tracking-[0.08em] ${r.volSource === "measured" ? "text-muted-foreground" : "text-destructive"}`}>vol {pct(r.vol)} · {r.volSource}</span></td>
                   <td className="tnum px-3 py-2">{r.legacyDays} d → <span className="text-primary">{r.railMin} min</span></td>
                   <td className="tnum px-3 py-2">{r.queryPct}%</td>
                   <td className="tnum px-3 py-2">{r.depth}</td>
@@ -326,7 +353,7 @@ export function HubPredictiveCompare({ defaultUniverse = "all" }: { defaultUnive
         </table>
       </div>
       <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-        Score = {SORT_WEIGHTS_TEXT}, each normalised across the hubs in view. Forecasts reuse the Prediction model: AD margin band by corridor depth, assumed annualised currency volatility, legacy route days and India's arrangement stack. Indicative demonstration only — not tax, legal or investment advice, and not evidence of treaty eligibility or regulator approval.
+        Score = {SORT_WEIGHTS_TEXT}, each normalised across the hubs in view. Forecasts reuse the Prediction model: AD margin band by corridor depth, currency volatility measured from a year of weekly INR reference rates (hubs marked "assumed" fall back to the model's fixed estimate only while no measurement is available), legacy route days and India's arrangement stack. Past volatility is not a forecast, and thinly traded currencies can carry noisy aggregator quotes that raise their measured figure. Indicative demonstration only — not tax, legal or investment advice, and not evidence of treaty eligibility or regulator approval.
       </p>
     </div>
   );

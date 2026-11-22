@@ -33,6 +33,8 @@ export type PredictInput = {
   netWorthCr?: number | null;
   /** Financial commitment already outstanding, INR crore. */
   committedCr?: number | null;
+  /** Realised annualised vol measured from real exchange rates; replaces the assumed band when present. */
+  measuredVol?: { vol: number; observations: number; to: string } | null;
 };
 
 export type Action = {
@@ -208,7 +210,8 @@ function cost(i: PredictInput): Forecast {
 
 function drift(i: PredictInput, code: string): Forecast {
   const inr = i.notionalCr * 1e7;
-  const sigma = volFor(code);
+  const measured = i.measuredVol ?? null;
+  const sigma = measured ? measured.vol : volFor(code);
   const holdDays = i.route === "Approval" ? 3 : 0.5;
   const band = sigma * Math.sqrt(holdDays / 252);
   const p50 = r2((inr * band * 0.67) / 1e7);
@@ -232,7 +235,9 @@ function drift(i: PredictInput, code: string): Forecast {
     legacy: r2(p90 * 2.4),
     drivers: [
       { k: "Settlement currency", v: code },
-      { k: "Assumed vol", v: `${(sigma * 100).toFixed(1)}% annualised` },
+      measured
+        ? { k: "Measured vol", v: `${(sigma * 100).toFixed(1)}% annualised · ${measured.observations} weekly INR changes to ${measured.to}` }
+        : { k: "Assumed vol", v: `${(sigma * 100).toFixed(1)}% annualised` },
       { k: "Exposure window", v: `${holdDays} trading days` },
       { k: "Drift since capture", v: realised === null ? "no stamped reference" : `${realised}%` },
     ],

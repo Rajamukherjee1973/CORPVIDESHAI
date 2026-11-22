@@ -2,7 +2,8 @@
  * Comparative predictive analytics across every hub — the 52 global hubs and
  * the 10 African SADC/COMESA hubs run through the identical `forecastAll`
  * model with identical case inputs, so differences come only from the
- * corridor (paper-route days, AD margin band, settlement-currency volatility,
+ * corridor (paper-route days, AD margin band, settlement-currency volatility
+ * measured from real exchange rates when supplied,
  * India's arrangement stack). Pure and deterministic; indicative, not advice.
  */
 import type { Hub } from "@/data/hubs";
@@ -10,7 +11,13 @@ import { HUBS } from "@/data/hubs";
 import { AFRICA_HUBS, BLOC_HUBS_IN_52, type AfricanBloc } from "@/data/africa-hubs";
 import { COUNTRY_META } from "@/data/currencies";
 import { arrangementDepth, arrangementFor } from "@/data/india-arrangements";
-import { forecastAll, verdict, type Forecast, type RouteKind } from "@/lib/predict";
+import { forecastAll, verdict, volFor, type Forecast, type RouteKind } from "@/lib/predict";
+import type { MeasuredVol } from "@/lib/fx-risk";
+
+/** Every settlement currency used by the 62 hubs, for one measured-risk request. */
+export function hubCurrencies(): string[] {
+  return [...new Set(hubsIn("all").map((h) => COUNTRY_META[h.country]?.currency ?? "USD"))].sort();
+}
 
 export type HubGroup = "global" | "africa";
 export type HubUniverse = "all" | "global" | "africa" | "SADC" | "COMESA";
@@ -31,6 +38,8 @@ export type CompareInput = {
   section195: boolean;
   /** Live INR per unit, keyed by currency. Optional: only shown, never scored. */
   inrPer?: Record<string, number>;
+  /** Realised volatility measured from real INR rates, keyed by currency. Missing codes use the labelled assumption. */
+  vols?: Record<string, MeasuredVol> | undefined;
 };
 
 export type HubCompareRow = {
@@ -39,6 +48,10 @@ export type HubCompareRow = {
   blocs: AfricanBloc[];
   ccy: string;
   rateNow: number | null;
+  /** Annualised currency volatility used for the FX tail, as a fraction. */
+  vol: number;
+  /** "measured" from real exchange rates, or "assumed" when no measurement is available. */
+  volSource: "measured" | "assumed";
   forecasts: Forecast[];
   verdict: ReturnType<typeof verdict>;
   /** All-in bank cost, bps (cost forecast p50). */
@@ -95,8 +108,9 @@ export function compareHubs(hubs: Hub[], i: CompareInput): HubCompareRow[] {
   const base = hubs.map((hub) => {
     const ccy = COUNTRY_META[hub.country]?.currency ?? "USD";
     const rateNow = i.inrPer?.[ccy] ?? null;
+    const measured = i.vols?.[ccy] ?? null;
     const forecasts = forecastAll(
-      { hub, notionalCr: i.notionalCr, route: i.route, docsReady: i.docsReady, firstTimeFiler: i.firstTimeFiler, section195: i.section195, rateNow },
+      { hub, notionalCr: i.notionalCr, route: i.route, docsReady: i.docsReady, firstTimeFiler: i.firstTimeFiler, section195: i.section195, rateNow, measuredVol: measured },
       ccy,
     );
     const a = arrangementFor(hub.country);
@@ -107,6 +121,8 @@ export function compareHubs(hubs: Hub[], i: CompareInput): HubCompareRow[] {
       blocs: hubBlocs(hub.city),
       ccy,
       rateNow,
+      vol: measured ? measured.vol : volFor(ccy),
+      volSource: measured ? ("measured" as const) : ("assumed" as const),
       forecasts,
       verdict: verdict(forecasts),
       costBps: pick(forecasts, "cost")?.p50 ?? 0,
