@@ -1,10 +1,24 @@
 /**
  * Hedge contract builder: books an outright FX forward against the rupee and
- * values it. Pure helpers only. Prices come from covered interest parity on
- * official policy rates plus the customer's bank margin; they are indicative,
- * not a dealable bank quote, and booking here never places a real trade.
+ * values it. Pure helpers only. USD fair forwards use FBIL's official USD/INR
+ * forward premia (built from banks' interbank quotes) on live spot; other
+ * currencies, and tenors past 12 months, use covered interest parity on
+ * official policy rates. The customer's bank margin is added on top. Neither is
+ * an executable quote from the customer's bank, and booking never places a trade.
  */
 import { forwardRate } from "@/lib/forward-pricing";
+import { benchmarkForward, type FbilCurve } from "@/lib/fbil-forward";
+
+/** fbil = FBIL USD/INR premia on live spot; parity = covered interest parity on policy rates; spot = labelled proxy. */
+export type FairBasis = "fbil" | "parity";
+
+/** Fair (no-margin) forward for `days`: the FBIL benchmark when supplied and covering the tenor, else covered parity. */
+export function fairForward(spot: number, days: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null): { fair: number; basis: FairBasis } | null {
+  const b = benchmark ? benchmarkForward(spot, benchmark, days) : null;
+  if (b != null) return { fair: b, basis: "fbil" };
+  if (rInrPct == null || rCcyPct == null || !(spot > 0)) return null;
+  return { fair: forwardRate(spot, rInrPct, rCcyPct, days), basis: "parity" };
+}
 
 /** buy = the company buys the foreign currency forward (pays abroad, e.g. an ODI remittance); sell = it sells foreign currency it will receive or holds. */
 export type ForwardSide = "buy" | "sell";
@@ -57,6 +71,7 @@ export type Quote = {
   marginPerUnit: number;
   premiumPa: number;
   inrCr: number;
+  basis: FairBasis;
 };
 
 export type QuoteInput = { side: ForwardSide; notional: number; tradeDate: string; maturityDate: string; marginBp: number };
@@ -76,13 +91,14 @@ export function validateTerms(t: QuoteInput): string | null {
  * Indicative contract rate. The bank margin always works against the customer:
  * a buyer pays above the fair forward, a seller receives below it.
  */
-export function quoteForward(t: QuoteInput, spot: number, rInrPct: number, rCcyPct: number): Quote | null {
+export function quoteForward(t: QuoteInput, spot: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null): Quote | null {
   if (validateTerms(t) || !(spot > 0)) return null;
   const days = daysBetween(t.tradeDate, t.maturityDate);
-  const fair = forwardRate(spot, rInrPct, rCcyPct, days);
+  const f = fairForward(spot, days, rInrPct, rCcyPct, benchmark);
+  if (!f) return null;
   const m = marginPerUnit(spot, t.marginBp, days);
-  const rate = t.side === "buy" ? fair + m : fair - m;
-  return { days, fair, rate, marginPerUnit: m, premiumPa: (fair / spot - 1) * (365 / days), inrCr: (t.notional * rate) / 1e7 };
+  const rate = t.side === "buy" ? f.fair + m : f.fair - m;
+  return { days, fair: f.fair, rate, marginPerUnit: m, premiumPa: (f.fair / spot - 1) * (365 / days), inrCr: (t.notional * rate) / 1e7, basis: f.basis };
 }
 
 const sign = (s: ForwardSide) => (s === "buy" ? 1 : -1);
@@ -99,6 +115,8 @@ export type Valuation = {
   /** Mark-to-market in INR, discounted at the INR rate. */
   pnlInr: number;
   matured: boolean;
+  /** What today's forward was priced from; "spot" once matured or as a proxy. */
+  basis: FairBasis | "spot";
 };
 
 /**
@@ -106,12 +124,15 @@ export type Valuation = {
  * fair forward for the remaining days, discounted at the INR rate; on or after
  * maturity it settles against spot.
  */
-export function markToMarket(c: ForwardContract, today: string, spotNow: number, rInrPct: number, rCcyPct: number): Valuation {
+export function markToMarket(c: ForwardContract, today: string, spotNow: number, rInrPct: number, rCcyPct: number, benchmark?: FbilCurve | null): Valuation {
   const remainingDays = daysBetween(today, c.maturityDate);
-  if (remainingDays <= 0) return { remainingDays: 0, currentForward: spotNow, pnlInr: maturityPnl(c, spotNow), matured: true };
-  const currentForward = forwardRate(spotNow, rInrPct, rCcyPct, remainingDays);
+  return revalue(c, remainingDays, spotNow, rInrPct, remainingDays > 0 ? fairForward(spotNow, remainingDays, rInrPct, rCcyPct, benchmark) : null);
+}
+
+function revalue(c: ForwardContract, remainingDays: number, spotNow: number, rInrPct: number, f: { fair: number; basis: FairBasis } | null): Valuation {
+  if (remainingDays <= 0 || !f) return { remainingDays: Math.max(0, remainingDays), currentForward: spotNow, pnlInr: maturityPnl(c, spotNow), matured: remainingDays <= 0, basis: "spot" };
   const df = 1 / (1 + (rInrPct / 100) * (remainingDays / 365));
-  return { remainingDays, currentForward, pnlInr: maturityPnl(c, currentForward) * df, matured: false };
+  return { remainingDays, currentForward: f.fair, pnlInr: maturityPnl(c, f.fair) * df, matured: false, basis: f.basis };
 }
 
 /** Points for a payoff chart across a symmetric band of rupee rates around `centre`. */
@@ -128,11 +149,17 @@ export function contractRef(year: number, code: string, seq: number): string {
   return `FWD-${year}-${code.toUpperCase()}-${String(Math.max(1, Math.floor(seq))).padStart(4, "0")}`;
 }
 
-/** Value a contract with policy rates when both exist; otherwise fall back to spot as a labelled proxy. */
-export function valueContract(c: ForwardContract, today: string, spotNow: number, rInrPct: number | undefined, rCcyPct: number | undefined): Valuation & { proxy: boolean } {
-  if (rInrPct == null || rCcyPct == null) {
-    const remainingDays = Math.max(0, daysBetween(today, c.maturityDate));
-    return { remainingDays, currentForward: spotNow, pnlInr: maturityPnl(c, spotNow), matured: remainingDays === 0, proxy: true };
+/**
+ * Value a contract from the FBIL benchmark (USD, when supplied) or policy-rate
+ * parity, discounted at India's policy rate; without those, fall back to spot
+ * as a labelled proxy.
+ */
+export function valueContract(c: ForwardContract, today: string, spotNow: number, rInrPct: number | undefined, rCcyPct: number | undefined, benchmark?: FbilCurve | null): Valuation & { proxy: boolean } {
+  const remainingDays = daysBetween(today, c.maturityDate);
+  const f = rInrPct != null && remainingDays > 0 ? fairForward(spotNow, remainingDays, rInrPct, rCcyPct, benchmark) : null;
+  if (rInrPct == null || (remainingDays > 0 && !f)) {
+    const left = Math.max(0, remainingDays);
+    return { remainingDays: left, currentForward: spotNow, pnlInr: maturityPnl(c, spotNow), matured: left === 0, proxy: true, basis: "spot" };
   }
-  return { ...markToMarket(c, today, spotNow, rInrPct, rCcyPct), proxy: false };
+  return { ...revalue(c, remainingDays, spotNow, rInrPct, f), proxy: false };
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, FileSignature, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PolicyRate } from "@/lib/forward-pricing";
+import { FBIL_URL, premiaPctFor, type FbilCurve } from "@/lib/fbil-forward";
 import {
   addDays, contractRef, maturityPnl, payoffCurve, quoteForward, validateTerms, valueContract,
   type ForwardContract, type ForwardSide,
@@ -47,8 +48,9 @@ function maturityPnlAt(points: { spot: number; pnl: number }[], s: number) {
   return a.pnl + ((s - a.spot) / (b.spot - a.spot)) * (b.pnl - a.pnl);
 }
 
-export function ForwardContractBuilder({ spots, rates, currencies, defaultMarginBp, ratesPending }: {
+export function ForwardContractBuilder({ spots, rates, currencies, defaultMarginBp, ratesPending, usdCurve, fbilError }: {
   spots: Record<string, number>; rates: Record<string, PolicyRate>; currencies: string[]; defaultMarginBp: number; ratesPending: boolean;
+  usdCurve: FbilCurve | null; fbilError: string | null;
 }) {
   const fb = useForwardBook();
   const [today, setToday] = useState("");
@@ -72,7 +74,9 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
   const rInr = rates["INR"]?.ratePct, rCcy = rates[code]?.ratePct;
   const terms = { side, notional: amountM * 1e6, tradeDate, maturityDate, marginBp };
   const invalid = tradeDate ? validateTerms(terms) : "Loading dates…";
-  const quote = spot && rInr != null && rCcy != null ? quoteForward(terms, spot, rInr, rCcy) : null;
+  const benchmark = code === "USD" ? usdCurve : null;
+  const quote = spot ? quoteForward(terms, spot, rInr, rCcy, benchmark) : null;
+  const fbilPct = benchmark && quote?.basis === "fbil" ? premiaPctFor(benchmark, quote.days) : null;
   const overrideRate = Number(override);
   const rate = overrideRate > 0 ? overrideRate : quote?.rate;
   const centre = quote?.fair ?? spot ?? 0;
@@ -84,7 +88,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
     const s = spots[c.code];
     const ri = rates["INR"]?.ratePct, rc = rates[c.code]?.ratePct;
     if (!s || !today) return null;
-    return valueContract(c, today, s, ri, rc);
+    return valueContract(c, today, s, ri, rc, c.code === "USD" ? usdCurve : null);
   };
   const rows = fb.contracts.map((c) => ({ c, v: value(c) }));
   const totalMtm = rows.reduce((s, r) => s + (r.v?.pnlInr ?? 0), 0);
@@ -93,7 +97,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
   async function book() {
     setNotice("");
     if (invalid) { setNotice(invalid); return; }
-    if (!spot || !rate) { setNotice(`No live ${code} price yet${rates[code] ? "" : " and no official rate — type the rate your bank confirmed"}.`); return; }
+    if (!spot || !rate) { setNotice(`No live ${code} price yet${quote || rates[code] ? "" : " and no benchmark or official rate — type the rate your bank confirmed"}.`); return; }
     const c: ForwardContract = {
       ref: contractRef(Number(tradeDate.slice(0, 4)), code, fb.nextSeq), code, side, notional: terms.notional, tradeDate, maturityDate, marginBp,
       rate, fairAtTrade: quote?.fair ?? spot, spotAtTrade: spot, rateOverridden: overrideRate > 0, bookedAt: new Date().toISOString(),
@@ -109,8 +113,8 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
   }
 
   function exportCsv() {
-    const head = ["ref", "currency", "side", "notional", "trade_date", "maturity_date", "contract_rate", "margin_bp", "rate_typed_by_user", "current_forward", "days_left", "mtm_inr"];
-    const lines = rows.map(({ c, v }) => [c.ref, c.code, c.side, c.notional, c.tradeDate, c.maturityDate, c.rate.toFixed(4), c.marginBp, c.rateOverridden, v?.currentForward.toFixed(4) ?? "", v?.remainingDays ?? "", v?.pnlInr.toFixed(0) ?? ""].join(","));
+    const head = ["ref", "currency", "side", "notional", "trade_date", "maturity_date", "contract_rate", "margin_bp", "rate_typed_by_user", "current_forward", "forward_basis", "days_left", "mtm_inr"];
+    const lines = rows.map(({ c, v }) => [c.ref, c.code, c.side, c.notional, c.tradeDate, c.maturityDate, c.rate.toFixed(4), c.marginBp, c.rateOverridden, v?.currentForward.toFixed(4) ?? "", v ? (v.proxy ? "spot_proxy" : v.basis) : "", v?.remainingDays ?? "", v?.pnlInr.toFixed(0) ?? ""].join(","));
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
     a.download = "corpvidesh-forward-contracts.csv";
@@ -128,7 +132,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
           <div className="text-[10px] uppercase tracking-[0.18em] text-primary">Hedge contract builder</div>
           <h3 className="mt-1 font-display text-2xl">Book a forward, then watch its profit or loss</h3>
         </div>
-        <p className="max-w-md text-xs text-muted-foreground">Practice tickets priced from live spot and official policy rates plus your margin. Nothing is sent to a bank.</p>
+        <p className="max-w-md text-xs text-muted-foreground">US dollar tickets use FBIL's official rupee forward premia on live spot; other currencies use official policy rates. Your bank's margin goes on top. Nothing is sent to a bank.</p>
       </div>
 
       <div className="grid gap-px bg-rule/20 lg:grid-cols-[1.05fr_1fr]">
@@ -175,7 +179,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
           <dl className="grid grid-cols-2 gap-px border border-rule/30 bg-rule/30 sm:grid-cols-3">
             {[
               ["Live spot", spot ? `₹${px(spot)}` : "—"],
-              ["Fair forward", quote ? `₹${px(quote.fair)}` : ratesPending ? "…" : "no official rate"],
+              [quote?.basis === "fbil" ? "Fair forward · FBIL" : "Fair forward · rate parity", quote ? `₹${px(quote.fair)}` : ratesPending ? "…" : "no official rate"],
               ["Your contract rate", rate ? `₹${px(rate)}` : "—"],
               ["Margin", quote ? `${(quote.marginPerUnit * 100).toFixed(1)} paise / ${code}` : "—"],
               ["Days", quote ? String(quote.days) : "—"],
@@ -187,6 +191,15 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
               </div>
             ))}
           </dl>
+          <p data-testid="forward-basis" className="border-l-2 border-primary pl-3 text-[11px] leading-relaxed text-muted-foreground">
+            {code !== "USD"
+              ? `FBIL publishes a forward benchmark for US dollars only, so ${code} is priced by rate parity from official policy rates.`
+              : quote?.basis === "fbil" && benchmark
+                ? <>Priced from <a href={FBIL_URL} target="_blank" rel="noreferrer" className="underline hover:text-primary">FBIL's USD/INR forward premia</a> of {benchmark.asOf}{fbilPct != null ? ` (${fbilPct.toFixed(2)}% a year for ${quote.days} days)` : ""}, which FBIL builds from banks' interbank forward quotes, applied to live spot. The public release is delayed; your bank's dealt rate will differ by its margin and the day's market.</>
+                : usdCurve
+                  ? "FBIL's benchmark stops at 12 months, so this longer tenor uses rate parity from official policy rates."
+                  : `${fbilError ?? "FBIL forward premia are loading."} Until they load, US dollars use rate parity from official policy rates.`}
+          </p>
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => void book()} disabled={fb.saving}><FileSignature className="mr-1 h-4 w-4" />Book forward</Button>
             {(notice || invalid) && <p role="status" className={`text-xs ${notice.startsWith("Booked") ? "text-primary" : "text-muted-foreground"}`}>{notice || invalid}</p>}
@@ -229,7 +242,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
                     <td className="p-3 text-right font-mono-ui">{(c.notional / 1e6).toLocaleString("en-IN", { maximumFractionDigits: 2 })}m</td>
                     <td className="p-3 font-mono-ui text-xs">{c.tradeDate} → {c.maturityDate}<span className="block text-[10px] text-muted-foreground">{v ? (v.matured ? "matured · settles at spot" : `${v.remainingDays} days left`) : ""}</span></td>
                     <td className="p-3 text-right font-mono-ui">₹{px(c.rate)}<span className="block text-[10px] text-muted-foreground">{c.marginBp} bp margin</span></td>
-                    <td className="p-3 text-right font-mono-ui">{v ? `₹${px(v.currentForward)}` : "—"}{v?.proxy && <span className="block text-[10px] text-muted-foreground">spot proxy</span>}</td>
+                    <td className="p-3 text-right font-mono-ui">{v ? `₹${px(v.currentForward)}` : "—"}{v?.proxy ? <span className="block text-[10px] text-muted-foreground">spot proxy</span> : v?.basis === "fbil" ? <span className="block text-[10px] text-muted-foreground">FBIL premia</span> : v?.basis === "parity" ? <span className="block text-[10px] text-muted-foreground">rate parity</span> : null}</td>
                     <td className={`p-3 text-right font-mono-ui ${tone(v?.pnlInr ?? 0)}`}>{v ? inr(v.pnlInr) : "—"}</td>
                     <td className="p-3"><button type="button" aria-label={`Remove ${c.ref}`} onClick={() => { if (fb.mode === "local" || window.confirm(`Remove ${c.ref} and its saved profit/loss history?`)) fb.remove(c); }}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></button></td>
                   </tr>
@@ -239,7 +252,7 @@ export function ForwardContractBuilder({ spots, rates, currencies, defaultMargin
           </div>
         )}
         {fb.mode === "account" && <HedgeHistory marks={fb.marks} note={fb.markNote} />}
-        <p className="border-t border-rule/20 px-5 py-3 text-[11px] leading-relaxed text-muted-foreground">Profit or loss today revalues each contract against the fair forward for its remaining days and discounts it at India's policy rate; on or after maturity it settles at spot. {fb.mode === "account" ? "Saved contracts are visible only to your account." : "Contracts stay in this browser tab only."} A real forward is dealt with an authorised dealer bank against an underlying exposure under its own documentation and quote.</p>
+        <p className="border-t border-rule/20 px-5 py-3 text-[11px] leading-relaxed text-muted-foreground">Profit or loss today revalues each contract against the fair forward for its remaining days (FBIL USD/INR premia for US dollars up to 12 months, otherwise rate parity) and discounts it at India's policy rate; on or after maturity it settles at spot. {fb.mode === "account" ? "Saved contracts are visible only to your account." : "Contracts stay in this browser tab only."} A real forward is dealt with an authorised dealer bank against an underlying exposure under its own documentation and quote.</p>
       </div>
     </div>
   );

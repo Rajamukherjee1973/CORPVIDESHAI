@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, CheckCircle2, CircleDashed, Play, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFxStream } from "@/lib/fx-stream";
-import { policyRates } from "@/lib/forward-pricing.functions";
+import { fbilForwardPremia, policyRates } from "@/lib/forward-pricing.functions";
 import { measuredFxRisk } from "@/lib/fx-risk.functions";
 import { readGlobalBenchmarks } from "@/lib/global-benchmarks.functions";
 import { assessInvestmentRoute } from "@/lib/legal-services.functions";
@@ -56,14 +56,15 @@ export function InvestorReadiness() {
       const r = await assessInvestmentRoute({ data: { investment: "ODI", investor: "listed", netWorthCr: 1000, existingExposureCr: 0, proposedCr: 4500, activity: "operating", denomination: "foreign", nocRequired: false, nocAvailable: false, evidenceComplete: true } });
       return `₹4,500 cr on ₹1,000 cr net worth → ${r.route} · ${r.findings.length} cited findings`;
     } },
-    { id: "forward", name: "Forward contract pricing", proves: "Contract rates combine live spot, policy rates and the bank margin.", to: "/intelligence", search: { view: "hedging" }, run: async () => {
-      const r = await policyRates();
+    { id: "forward", name: "Forward contract pricing", proves: "USD contract rates combine live spot, FBIL's official forward premia and the bank margin.", to: "/intelligence", search: { view: "hedging" }, run: async () => {
+      const [r, f] = await Promise.all([policyRates(), fbilForwardPremia()]);
       const spot = tape.anchorInrPer["USD"], inr = r.rates["INR"]?.ratePct, usd = r.rates["USD"]?.ratePct;
-      if (!spot || inr == null || usd == null) throw new Error("Spot or rates missing");
+      if (!spot) throw new Error("Spot missing");
       const today = new Date().toISOString().slice(0, 10);
-      const q = quoteForward({ side: "buy", notional: 1e6, tradeDate: today, maturityDate: addDays(today, 91), marginBp: 40 }, spot, inr, usd);
-      if (!q) throw new Error("No quote");
-      return `USD 3-month buy at 40 bp: ₹${q.rate.toFixed(2)} (spot ₹${spot.toFixed(2)})`;
+      const q = quoteForward({ side: "buy", notional: 1e6, tradeDate: today, maturityDate: addDays(today, 91), marginBp: 40 }, spot, inr, usd, f.curve);
+      if (!q) throw new Error(f.error ?? "No quote");
+      if (q.basis !== "fbil") throw new Error(`${f.error ?? "FBIL premia unavailable"} — rate-parity fallback ₹${q.rate.toFixed(2)}`);
+      return `USD 3-month buy at 40 bp: ₹${q.rate.toFixed(2)} (spot ₹${spot.toFixed(2)}, FBIL premia ${f.curve!.asOf})`;
     } },
     { id: "desk", name: "Six-regulator routing", proves: "Over-ceiling files go to the Approval route and need four officer signatures.", to: "/access", run: async () => {
       const a = evaluateDesks({ investment: "ODI", amountCr: 950, netWorthCr: 1000, existingCr: 0 }, []);

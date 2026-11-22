@@ -5,6 +5,7 @@
  * rates that can differ from policy rates.
  */
 import type { HedgePosition } from "@/lib/fx-swings";
+import { benchmarkForward, type FbilCurve } from "@/lib/fbil-forward";
 
 export const RATE_SOURCE = "BIS central bank policy rates (WS_CBPOL), daily, latest observation";
 export const MAX_RATE_AGE_DAYS = 400;
@@ -54,12 +55,13 @@ export function premiumPa(spot: number, forward: number, days: number): number {
   return (forward / spot - 1) * (365 / days);
 }
 
-export type CarryLine = { code: string; forward: number | null; premiumPa: number | null; carryCr: number; priced: boolean; proxyOf?: string };
+export type CarryLine = { code: string; forward: number | null; premiumPa: number | null; carryCr: number; priced: boolean; proxyOf?: string; basis?: "fbil" | "parity" };
 
 /**
  * Carry of hedging foreign holdings by selling the currency forward. Positive
  * carry is earned (forward above spot), negative is a cost. A bank margin, in
- * fraction a year, always reduces carry. Unpriced currencies use `fallbackCostPa`.
+ * fraction a year, always reduces carry. USD uses the FBIL benchmark curve when
+ * supplied and covering the horizon. Unpriced currencies use `fallbackCostPa`.
  */
 export function hedgeCarry(
   positions: HedgePosition[],
@@ -68,6 +70,7 @@ export function hedgeCarry(
   weeks: number,
   marginPa: number,
   fallbackCostPa: number,
+  usdCurve?: FbilCurve | null,
 ): { lines: CarryLine[]; netCr: number } {
   const days = Math.round(weeks * 7);
   const inr = rates["INR"];
@@ -75,10 +78,15 @@ export function hedgeCarry(
     const hedged = Math.max(0, p.exposureCr) * Math.min(1, Math.max(0, p.hedgeRatio));
     const spot = spots[p.code];
     const r = rates[p.code];
+    const fb = p.code === "USD" && usdCurve && spot ? benchmarkForward(spot, usdCurve, days) : null;
+    if (fb != null && spot) {
+      const prem = premiumPa(spot, fb, days);
+      return { code: p.code, forward: fb, premiumPa: prem, carryCr: hedged * (prem - marginPa) * (weeks / 52), priced: true, basis: "fbil" };
+    }
     if (inr && r && spot) {
       const f = forwardRate(spot, inr.ratePct, r.ratePct, days);
       const prem = premiumPa(spot, f, days);
-      return { code: p.code, forward: f, premiumPa: prem, carryCr: hedged * (prem - marginPa) * (weeks / 52), priced: true, ...(r.proxyOf ? { proxyOf: r.proxyOf } : {}) };
+      return { code: p.code, forward: f, premiumPa: prem, carryCr: hedged * (prem - marginPa) * (weeks / 52), priced: true, basis: "parity", ...(r.proxyOf ? { proxyOf: r.proxyOf } : {}) };
     }
     return { code: p.code, forward: null, premiumPa: null, carryCr: -hedged * fallbackCostPa * (weeks / 52), priced: false };
   });

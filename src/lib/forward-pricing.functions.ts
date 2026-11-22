@@ -6,3 +6,10 @@ export const policyRates = createServerFn({ method: "GET" }).handler(async () =>
   const { serviceOperation } = await import("./services/runtime.server");
   return serviceOperation("market.policy-rates", () => readPolicyRates());
 });
+
+/** Public read: latest public FBIL USD/INR forward premia curve. No user data. */
+export const fbilForwardPremia = createServerFn({ method: "GET" }).handler(async () => {
+  const { readFbilForwardPremia } = await import("./services/fbil-forwards.server");
+  const { serviceOperation } = await import("./services/runtime.server");
+  return serviceOperation("market.fbil-forward-premia", () => readFbilForwardPremia());
+});
