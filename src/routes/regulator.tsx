@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DeskProcess3D } from "@/components/site/DeskProcess3D";
+import { SixRegulatorDesk } from "@/components/site/SixRegulatorDesk";
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { Frame, Rule } from "@/components/site/Frame";
@@ -164,6 +165,8 @@ function RegulatorPage() {
           human officer at each authority has to press approve before the money can move.
         </Plain>
       </section>
+
+      <SixRegulatorDesk />
 
       <section className="mx-auto max-w-[1400px] px-6 py-8">
         <Rule label="AD Category-I bank — live processing" />

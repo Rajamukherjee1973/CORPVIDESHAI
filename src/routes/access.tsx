@@ -5,6 +5,7 @@ import { TopMarketTickers } from "@/components/site/TopMarketTickers";
 import { TreasuryClearanceStudio } from "@/components/site/TreasuryClearanceStudio";
 import { Deferred } from "@/components/site/Deferred";
 import { ApplicationHub } from "@/components/site/ApplicationHub";
+import { SixRegulatorDesk } from "@/components/site/SixRegulatorDesk";
 import { Button } from "@/components/ui/button";
 import { Frame, Rule } from "@/components/site/Frame";
 import { RegulatorTheatre, TreasuryTheatre } from "@/components/site/DeskTheatre";
@@ -85,7 +86,7 @@ function Access() {
   return (
     <Frame>
       <TopMarketTickers />
-      <Deferred><TreasuryClearanceStudio /><ApplicationHub /></Deferred>
+      <Deferred><TreasuryClearanceStudio /><SixRegulatorDesk compact /><ApplicationHub /></Deferred>
       <details className="mx-auto max-w-[1400px] px-6" onToggle={(e) => setDesksOpen(e.currentTarget.open)}>
         <summary className="cursor-pointer border-y border-border py-4 font-mono-ui text-xs text-muted-foreground">Local desk simulations & animated walkthroughs</summary>
         <p className="mt-4 text-xs text-muted-foreground">Device-only demonstration selectors below are not sign-in and cannot authorize shared portal records.</p>

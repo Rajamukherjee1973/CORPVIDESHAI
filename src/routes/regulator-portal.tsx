@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useRegulatorFilings } from "@/lib/use-regulator-filings";
 import { RegulatorDemoGuide, RegulatorDeskBoard } from "@/components/site/RegulatorDeskBoard";
+import { SixRegulatorDesk } from "@/components/site/SixRegulatorDesk";
 const title = "Regulator Portal — Secure Demonstration Access | CorpVidesh AI";
 const description = "Account-protected Form FC demonstration submissions and an append-only shared regulator register.";
 export const Route = createFileRoute("/regulator-portal")({ head: () => ({ meta: [{ title }, { name: "description", content: description }, { property: "og:title", content: title }, { property: "og:description", content: description }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: Portal });
@@ -48,5 +49,5 @@ function Portal() {
       <p className="text-xs text-muted-foreground">Private accounts are invitation-only. The public showcase desks below are isolated from private records; a device-selected regulator desk does not grant access.</p>
     </form>}
     {ready && !user && <RegulatorDemoGuide onPick={(e, p) => { setEmail(e); setPassword(p); }} />}
-  </section></Frame>;
+  </section><SixRegulatorDesk /></Frame>;
 }

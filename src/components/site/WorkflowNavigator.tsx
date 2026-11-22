@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const JOURNEY = [
-  { to: "/access", label: "Applications", detail: "Corporate · fund · reviewer desks" },
+  { to: "/access", label: "Applications", detail: "Workspaces · six-regulator desk" },
   { to: "/intelligence", label: "Intelligence", detail: "Currencies · hubs · prediction" },
   { to: "/agents", label: "Agent desk", detail: "Graph · copilot · reader · outlook" },
   { to: "/evidence", label: "Working evidence", detail: "Safeguards · simulated case" },

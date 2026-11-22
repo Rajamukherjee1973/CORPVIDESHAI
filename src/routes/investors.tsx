@@ -4,6 +4,7 @@ import { Frame, Rule } from "@/components/site/Frame";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowUpRight, Network, Scale, FileCheck2 } from "lucide-react";
+import { InvestorReadiness } from "@/components/site/InvestorReadiness";
 import teamVideo from "@/assets/corpvidesh-team-video.mp4.asset.json";
 
 const TITLE = "Investor Brief — Advanced Treasury Proof of Concept | CorpVidesh AI";
@@ -45,9 +46,9 @@ const WHY_NOW = [
 
 const MARKET = [
   ["212", "Investment scenarios", "ODI/OPI choices with eligibility review, not a list of permitted investments."],
-  ["52", "Financial hubs", "Hub currencies, observed history where supported and market provenance."],
+  ["62", "Financial hubs", "52 global hubs plus 10 African SADC/COMESA hubs, with measured currency risk."],
   ["4", "Service domains", "Legal, filings, market evidence and agent orchestration in one deployment."],
-  ["2", "Accountable desks", "Corporate treasury and regulator demonstration evidence views."],
+  ["4", "Secure workspaces", "Corporate treasury, fund investor, GIFT review and Form FC register, each account-protected."],
 ];
 
 const MODEL = [
@@ -97,7 +98,7 @@ const MATRIX: [string, (0 | 1 | 2)[]][] = [
 const MARK = ["Absent", "Partial", "Native"] as const;
 
 const ROADMAP = [
-  ["Now", "Prototype", "Nine-stage console, 52-corridor atlas, 500-entity Rule 7 board, supervisor view and ZK verifier — running end to end."],
+  ["Now", "Prototype", "Treasury console, 62-hub atlas, top-1,000 company scenarios, six-regulator desk, hedge contract builder and secure portals — running end to end as demonstrations."],
   ["Q+1", "GIFT pilot", "One corridor, GIFT IFSC to Singapore, with one AD bank and one supervisory observer on the ledger."],
   ["Q+2", "Second corridor & bank", "Prove the rail is corridor-agnostic. Onboard the first paying treasuries from the top 200 by net worth."],
   ["Q+3", "Supervisory node", "Formal regulator channel membership, live APR and reporting automation across the onboarded cohort."],
@@ -138,7 +139,7 @@ function Investors() {
         </div>
         <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {MARKET.map(([k, t, d]) => (
-            <div key={k} className="bg-background p-6">
+            <div key={t} className="bg-background p-6">
               <p className="font-display text-5xl text-primary">{k}</p>
               <p className="font-mono-ui mt-3 text-[10px] uppercase tracking-[0.16em]">{t}</p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{d}</p>
@@ -146,6 +147,8 @@ function Investors() {
           ))}
         </div>
       </section>
+
+      <InvestorReadiness />
 
       <section className="mx-auto max-w-[1400px] px-6 pb-8">
         <Rule label="Team video / 3-minute brief" />

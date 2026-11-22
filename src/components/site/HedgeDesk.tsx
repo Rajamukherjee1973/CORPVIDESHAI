@@ -9,6 +9,7 @@ import { bookRisk, policyRatio, shockPnl, type HedgePosition } from "@/lib/fx-sw
 import { HUB_CCYS, useMeasuredFxRisk } from "@/lib/use-fx-risk";
 import { useHedgeBook } from "@/lib/hedge-book";
 import { useFxStream } from "@/lib/fx-stream";
+import { ForwardContractBuilder } from "@/components/site/ForwardContractBuilder";
 
 const HORIZONS = [[4, "1 month"], [13, "3 months"], [26, "6 months"], [52, "1 year"]] as const;
 const cr = (v: number) => `${v < 0 ? "−" : ""}₹${Math.abs(v).toFixed(2)} cr`;
@@ -178,6 +179,14 @@ export function HedgeDesk() {
           <Button size="sm" onClick={add} disabled={book.some((p) => p.code === addCcy)}>Add currency</Button>
         </div>
       </div>
+
+      <ForwardContractBuilder
+        spots={spots}
+        rates={rates}
+        currencies={[...new Set([...book.map((p) => p.code), ...HUB_CCYS, "EUR", "JPY", "CHF"])].filter((c) => c !== "INR").sort()}
+        defaultMarginBp={marginBp}
+        ratesPending={rq.isPending}
+      />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="border border-rule/30 p-5">

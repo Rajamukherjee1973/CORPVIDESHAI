@@ -16,7 +16,7 @@ export const PUBLIC_NAV: NavNode[] = [
   { to: "/access", label: "Applications" },
   { label: "Intelligence", items: [
     { to: "/predictive-cases", label: "Predictive intelligence cases", note: "Six large-corporate decisions, forecast before they are made" },
-    { to: "/intelligence", label: "Prediction & FX", note: "Forecast · hedge desk · FX tape · ledger" },
+    { to: "/intelligence", label: "Prediction & FX", note: "Forecast · hedge desk & forward builder · FX tape · ledger" },
     { to: "/currency-risk", label: "Hub currency risk", note: "Live ₹ rate and one-year swings for all 62 hubs" },
     { to: "/hubs", label: "52 hubs atlas" },
     { to: "/africa-hubs", label: "+10 African hubs", note: "SADC & COMESA trade blocs" },
@@ -37,7 +37,7 @@ export const PUBLIC_NAV: NavNode[] = [
   { label: "Evidence & VC", items: [
     { to: "/evidence", label: "Working evidence studio" },
     { to: "/architecture", label: "Architecture & feasibility" },
-    { to: "/investors", label: "Investor brief" },
+    { to: "/investors", label: "Investor brief", note: "Live readiness check · 10-minute demo script" },
     { to: "/decks", label: "Presentation downloads" },
     { to: "/proof", label: "Competitive evidence" },
     { to: "/security", label: "Security demonstration" },
@@ -82,7 +82,7 @@ const DIRECTORY_RAW: NavItem[] = [
   { to: "/casefile", label: "Regulator audit timeline + worked money case" },
   { to: "/section195", label: "Section 195 compliance engine — chargeability, TRC/10F, 15CA/15CB" },
   { to: "/supervisor", label: "Supervisor view" },
-  { to: "/investors", label: "Investor brief" },
+  { to: "/investors", label: "Investor brief", note: "Live readiness check · 10-minute demo script" },
   { to: "/decks", label: "Live decks" },
   { to: "/access", label: "Desk access" },
   { to: "/ssl", label: "HTTPS / SSL status" },
