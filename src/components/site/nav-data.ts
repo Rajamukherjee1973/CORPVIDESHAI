@@ -16,7 +16,8 @@ export const PUBLIC_NAV: NavNode[] = [
   { to: "/access", label: "Applications" },
   { label: "Intelligence", items: [
     { to: "/predictive-cases", label: "Predictive intelligence cases", note: "Six large-corporate decisions, forecast before they are made" },
-    { to: "/intelligence", label: "Prediction & FX", note: "FX tape · market board · corridor ledger" },
+    { to: "/intelligence", label: "Prediction & FX", note: "Forecast · hedge desk · FX tape · ledger" },
+    { to: "/currency-risk", label: "Hub currency risk", note: "Live ₹ rate and one-year swings for all 62 hubs" },
     { to: "/hubs", label: "52 hubs atlas" },
     { to: "/africa-hubs", label: "+10 African hubs", note: "SADC & COMESA trade blocs" },
     { to: "/agents", label: "Agent desk · all AI agents" },
@@ -59,6 +60,7 @@ const DIRECTORY_RAW: NavItem[] = [
     label: "Architecture — retrieval, memory, evaluation, secure tool boundary",
   },
   { to: "/hubs", label: "52 hubs atlas" },
+  { to: "/currency-risk", label: "Hub currency-risk dashboard — live rupee rates, swings, exposure and watchlist" },
   { to: "/africa-hubs", label: "African hubs — 10 SADC & COMESA corridors beside the 52" },
   {
     to: "/intelligence",

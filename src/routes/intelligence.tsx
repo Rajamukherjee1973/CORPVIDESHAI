@@ -8,6 +8,7 @@ import { MarketsBoard, MarketsTicker } from "@/components/site/MarketsBoard";
 import { TreasuryLedger } from "@/components/site/TreasuryLedger";
 import { Currency52Board } from "@/components/site/Currency52Board";
 import { LiveMarketsDesk, HubComparative } from "@/components/site/LiveMarketsDesk";
+import { HedgeDesk } from "@/components/site/HedgeDesk";
 import { DeskProcess3D } from "@/components/site/DeskProcess3D";
 import { recordCapture, setFxPageContext } from "@/lib/fx-stream";
 
@@ -15,11 +16,12 @@ const TITLE = "Prediction Surface — Forecast and Recommended Action | CorpVide
 const DESC =
   "One desk instead of four: forecasts for clearance, cost, currency drift, query risk and statutory headroom, with the live FX tape, the 52-hub exchange board and the corridor ledger folded in behind them.";
 
-const VIEWS = ["forecast", "tape", "markets", "ledger"] as const;
+const VIEWS = ["forecast", "hedging", "tape", "markets", "ledger"] as const;
 type View = (typeof VIEWS)[number];
 
 const LABEL: Record<View, string> = {
   forecast: "Forecast",
+  hedging: "Hedge desk",
   tape: "FX tape",
   markets: "Hub markets",
   ledger: "Corridor ledger",
@@ -83,6 +85,12 @@ function IntelligenceDesk() {
             </Link>
           ))}
           <Link
+            to="/currency-risk"
+            className="px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-primary underline-offset-4 hover:underline"
+          >
+            Hub currency-risk dashboard →
+          </Link>
+          <Link
             to="/predictive-cases"
             className="px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-primary underline-offset-4 hover:underline"
           >
@@ -101,6 +109,19 @@ function IntelligenceDesk() {
             <FxDashboard />
           </section>
         </>
+      )}
+
+      {view === "hedging" && (
+        <section className="mx-auto max-w-[1400px] px-6 pb-16">
+          <Rule label="Hedge desk — combined currency risk of your outbound book" />
+          <h2 className="font-display mb-3 max-w-3xl text-4xl">How much could the book lose, and how much does cover cost?</h2>
+          <p className="mb-8 max-w-3xl text-muted-foreground">
+            Set what you hold in each currency and how much you cover with forwards. The desk combines a year of real
+            weekly rupee moves — including how currencies move together — into one bad-case figure, prices the cover,
+            stress-tests a rupee shock and replays the worst real week on today's book.
+          </p>
+          <HedgeDesk />
+        </section>
       )}
 
       {view === "tape" && (

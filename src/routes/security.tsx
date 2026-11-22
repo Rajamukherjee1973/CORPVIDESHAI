@@ -3,7 +3,8 @@ import { ForecastLede } from "@/components/site/ForecastLede";
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DeskProcess3D } from "@/components/site/DeskProcess3D";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { BeneficiaryLab, ChainLab, LiveChecks, StrideMatrix } from "@/components/site/SecurityLab";
 import { Frame, Rule } from "@/components/site/Frame";
 import { EngineRail } from "@/components/site/EngineRail";
 import { useSession } from "@/lib/session";
@@ -47,9 +48,23 @@ import {
 
 const TITLE = "Live Security Theatre — Federated Rail and Breach Response | CorpVidesh AI";
 const DESC =
-  "Watch a treasury filing fan out to six regulators in parallel on a federated hash-chained ledger, then run a live unauthorised-access, ledger-tamper, exfiltration or payment-hijack simulation and see exactly how the rail detects, contains and recovers.";
+  "Run real, read-only security self-checks on this site, try to tamper with a SHA-256 hash-chained filing, swap a payee, then watch federated routing, 3D breach drills and an honest STRIDE threat model.";
+
+const VIEWS = ["checks", "rail", "breach", "threats", "controls"] as const;
+type View = (typeof VIEWS)[number];
+const VIEW_META: Record<View, { n: string; h: string; d: string }> = {
+  checks: { n: "01", h: "Live checks", d: "Real tests you can run now" },
+  rail: { n: "02", h: "Federated rail", d: "One filing, six lanes at once" },
+  breach: { n: "03", h: "Breach theatre", d: "3D attack-and-defence drills" },
+  threats: { n: "04", h: "Threat model", d: "STRIDE · what is built vs shown" },
+  controls: { n: "05", h: "Control map", d: "Safeguard → framework" },
+};
 
 export const Route = createFileRoute("/security")({
+  validateSearch: (search: Record<string, unknown>): { view?: View } => {
+    const v = String(search["view"] ?? "checks") as View;
+    return { view: VIEWS.includes(v) ? v : "checks" };
+  },
   head: () => ({
     meta: [
       { title: TITLE },
@@ -137,6 +152,7 @@ function useClock(total: number) {
 
 function SecurityPage() {
   const { session } = useSession();
+  const { view = "checks" } = Route.useSearch();
   const rail = useClock(RAIL_TOTAL_MS);
   const inc = useClock(THREAT_TOTAL_MS);
   const [threat, setThreat] = useState<Threat | null>(null);
@@ -355,15 +371,34 @@ function SecurityPage() {
     <Frame>
       <div className="mx-auto max-w-[1400px] px-6 py-14">
         <SecurityAssuranceHeader />
-        <Plain>
-          Money leaving India passes many desks. This page shows those desks working at the same time
-          instead of one after another, and then shows what happens the moment somebody tries to break in
-          or change a number they should not.
-        </Plain>
+        <nav aria-label="Security desk views" className="mt-8 grid grid-cols-2 gap-px border border-rule/20 bg-rule/15 sm:grid-cols-3 lg:grid-cols-5">
+          {VIEWS.map((v) => (
+            <Link
+              key={v}
+              to="/security"
+              search={{ view: v }}
+              aria-current={v === view ? "page" : undefined}
+              className={`group px-4 py-3 transition-colors ${v === view ? "bg-primary text-primary-foreground" : "bg-background hover:bg-primary/[0.06]"}`}
+            >
+              <span className={`font-mono-ui text-[10px] tracking-[0.18em] ${v === view ? "text-primary-foreground" : "text-primary"}`}>{VIEW_META[v].n}</span>
+              <p className="font-display text-lg leading-tight">{VIEW_META[v].h}</p>
+              <p className={`text-[11px] ${v === view ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{VIEW_META[v].d}</p>
+            </Link>
+          ))}
+        </nav>
+
+        {view === "checks" && (
+          <div className="mt-10 space-y-8">
+            <LiveChecks />
+            <ChainLab />
+            <BeneficiaryLab />
+          </div>
+        )}
 
         {/* ---------------------------------------------------------- */}
-        <section id="rail" className="mt-20 scroll-mt-24">
-          <Rule label="01 — Federated routing, treasury to six regulators" />
+        {view === "rail" && (<>
+        <section id="rail" className="mt-12 scroll-mt-24">
+          <Rule label="02 — Federated routing, treasury to six regulators" />
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={rail.run}
@@ -443,13 +478,16 @@ function SecurityPage() {
           </Plain>
         </section>
 
-      <section className="mx-auto max-w-[1400px] px-6 pb-12">
-        <ForecastLede desk="Security desk" focus={["clearance", "rework"]} />
-      </section>
+        <section className="mt-12">
+          <ForecastLede desk="Security desk" focus={["clearance", "rework"]} />
+        </section>
+        <div className="mt-12"><DeskProcess3D desk="security" /></div>
+        </>)}
 
         {/* ---------------------------------------------------------- */}
-        <section id="breach" className="mt-24 scroll-mt-24">
-          <Rule label="02 — Live breach simulation" />
+        {view === "breach" && (
+        <section id="breach" className="mt-12 scroll-mt-24">
+          <Rule label="03 — Live breach simulation" />
           <div className="mb-8 border border-rule/20">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rule/15 px-5 py-4">
               <div>
@@ -515,8 +553,11 @@ function SecurityPage() {
               <p className="mt-3 text-xs text-muted-foreground">Synthetic outcomes and response times; no real attacks, live payment holds or regulator alerts are executed.</p>
             </div>
             {/* --- run parameters ------------------------------------- */}
-            <div className="border-b border-rule/15 px-5 py-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <details className="group border-b border-rule/15 px-5 py-4">
+              <summary className="font-mono-ui cursor-pointer list-none text-[10px] uppercase tracking-[0.18em] text-primary">
+                <span className="group-open:hidden">▸</span><span className="hidden group-open:inline">▾</span> Run parameters &amp; presets · intensity {intensity.toFixed(1)}x · {density} nodes · quorum {quorumPct}%
+              </summary>
+              <div className="mt-4 flex flex-wrap items-baseline justify-between gap-3">
                 <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">
                   Run parameters · reproduce an exact outcome
                 </p>
@@ -680,7 +721,7 @@ function SecurityPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </details>
 
             <div className="px-5 pt-4">
               <div className="h-1 w-full bg-rule/15">
@@ -835,10 +876,13 @@ function SecurityPage() {
           </div>
 
           {/* --- alerts + telemetry export --------------------------- */}
-          <div className="mt-8 border border-rule/20">
+          <details className="group mt-8 border border-rule/20">
+            <summary className="font-mono-ui flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-3 border-b border-rule/15 px-5 py-4 text-[10px] uppercase tracking-[0.18em] text-primary">
+              <span><span className="group-open:hidden">▸</span><span className="hidden group-open:inline">▾</span> Deviation alerts and telemetry archive · {alerts.length} alerts · {runs.length} runs</span>
+            </summary>
             <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-rule/15 px-5 py-4">
               <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">
-                Deviation alerts and telemetry archive
+                Thresholds
               </p>
               <button
                 onClick={() => setAlertsOn((v) => !v)}
@@ -963,41 +1007,7 @@ function SecurityPage() {
                 </ul>
               )}
             </div>
-          </div>
-
-          <Plain>
-            You set the limits: how slow a regulator lane may be, how long agreement may take, and how often
-            containment must succeed. Cross any of those and a line appears here as it happens. The two export
-            buttons save everything — the limits, the run history, the lane times and every alert — as a
-            spreadsheet file or a machine-readable file you can archive.
-          </Plain>
-
-          <Plain>
-            Press one button and the rail attacks itself four times in a row while you watch. The rotating
-            picture is the actual network of eight sealed copies: red lines are live agreement between them,
-            the outside dot is the attacker, and you can see the moment the line to it is cut.
-          </Plain>
-
-          <div className="grid gap-px bg-rule/15 md:grid-cols-2 xl:grid-cols-4">
-            {THREATS.map((th) => (
-              <button
-                key={th.id}
-                onClick={() => launch(th)}
-                className={`bg-background p-5 text-left transition-colors hover:bg-primary/[0.04] ${
-                  threat?.id === th.id ? "outline outline-2 -outline-offset-2 outline-primary" : ""
-                }`}
-              >
-                <p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">
-                  {th.severity}
-                </p>
-                <p className="mt-2 font-display text-xl leading-tight">{th.label}</p>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{th.vector}</p>
-                <p className="font-mono-ui mt-3 text-[10px] uppercase tracking-[0.14em] text-primary">
-                  Run this attack →
-                </p>
-              </button>
-            ))}
-          </div>
+          </details>
 
           <div className="mt-8 border border-rule/20">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rule/15 px-5 py-4">
@@ -1103,9 +1113,16 @@ function SecurityPage() {
             same shared ledger the regulators read, so an incident can never be quietly deleted.
           </Plain>
         </section>
+        )}
 
-        <section id="design" className="mt-24 scroll-mt-24">
-          <Rule label="03 — Why a federated design survives this" />
+        {view === "threats" && (<>
+        <section className="mt-12">
+          <Rule label="04 — Threat model · STRIDE" />
+          <h2 className="font-display mb-6 max-w-3xl text-4xl">Every way in, the control that answers it, and whether it is really built.</h2>
+          <StrideMatrix />
+        </section>
+        <section id="design" className="mt-16 scroll-mt-24">
+          <Rule label="Why a federated design survives this" />
           <div className="grid gap-px bg-rule/15 md:grid-cols-3">
             {[
               {
@@ -1135,15 +1152,16 @@ function SecurityPage() {
           </div>
         </section>
 
-        <section id="controls" className="mt-24 scroll-mt-24">
-          <Rule label="04 — Control assurance map" />
+        </>)}
+
+        {view === "controls" && (
+        <section id="controls" className="mt-12 scroll-mt-24">
+          <Rule label="05 — Control assurance map" />
           <SecurityControlMap />
         </section>
+        )}
 
-        <div className="mt-24">
-          <div className="mb-10">
-            <DeskProcess3D desk="security" />
-          </div>
+        <div className="mt-20">
           <EngineRail desk="security" session={session} />
         </div>
       </div>

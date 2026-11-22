@@ -21,6 +21,7 @@ import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CorporateDashboardRouteImport } from './routes/corporate-dashboard'
+import { Route as CurrencyRiskRouteImport } from './routes/currency-risk'
 import { Route as DecksRouteImport } from './routes/decks'
 import { Route as EvidenceRouteImport } from './routes/evidence'
 import { Route as FilingSubmissionRouteImport } from './routes/filing-submission'
@@ -124,6 +125,11 @@ const ContactRoute = ContactRouteImport.update({
 const CorporateDashboardRoute = CorporateDashboardRouteImport.update({
   id: '/corporate-dashboard',
   path: '/corporate-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CurrencyRiskRoute = CurrencyRiskRouteImport.update({
+  id: '/currency-risk',
+  path: '/currency-risk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DecksRoute = DecksRouteImport.update({
@@ -362,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/console': typeof ConsoleRoute
   '/contact': typeof ContactRoute
   '/corporate-dashboard': typeof CorporateDashboardRoute
+  '/currency-risk': typeof CurrencyRiskRoute
   '/decks': typeof DecksRoute
   '/evidence': typeof EvidenceRoute
   '/filing-submission': typeof FilingSubmissionRoute
@@ -420,6 +427,7 @@ export interface FileRoutesByTo {
   '/console': typeof ConsoleRoute
   '/contact': typeof ContactRoute
   '/corporate-dashboard': typeof CorporateDashboardRoute
+  '/currency-risk': typeof CurrencyRiskRoute
   '/decks': typeof DecksRoute
   '/evidence': typeof EvidenceRoute
   '/filing-submission': typeof FilingSubmissionRoute
@@ -479,6 +487,7 @@ export interface FileRoutesById {
   '/console': typeof ConsoleRoute
   '/contact': typeof ContactRoute
   '/corporate-dashboard': typeof CorporateDashboardRoute
+  '/currency-risk': typeof CurrencyRiskRoute
   '/decks': typeof DecksRoute
   '/evidence': typeof EvidenceRoute
   '/filing-submission': typeof FilingSubmissionRoute
@@ -539,6 +548,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/contact'
     | '/corporate-dashboard'
+    | '/currency-risk'
     | '/decks'
     | '/evidence'
     | '/filing-submission'
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/contact'
     | '/corporate-dashboard'
+    | '/currency-risk'
     | '/decks'
     | '/evidence'
     | '/filing-submission'
@@ -655,6 +666,7 @@ export interface FileRouteTypes {
     | '/console'
     | '/contact'
     | '/corporate-dashboard'
+    | '/currency-risk'
     | '/decks'
     | '/evidence'
     | '/filing-submission'
@@ -714,6 +726,7 @@ export interface RootRouteChildren {
   ConsoleRoute: typeof ConsoleRoute
   ContactRoute: typeof ContactRoute
   CorporateDashboardRoute: typeof CorporateDashboardRoute
+  CurrencyRiskRoute: typeof CurrencyRiskRoute
   DecksRoute: typeof DecksRoute
   EvidenceRoute: typeof EvidenceRoute
   FilingSubmissionRoute: typeof FilingSubmissionRoute
@@ -844,6 +857,13 @@ declare module '@tanstack/react-router' {
       path: '/corporate-dashboard'
       fullPath: '/corporate-dashboard'
       preLoaderRoute: typeof CorporateDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/currency-risk': {
+      id: '/currency-risk'
+      path: '/currency-risk'
+      fullPath: '/currency-risk'
+      preLoaderRoute: typeof CurrencyRiskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/decks': {
@@ -1170,6 +1190,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsoleRoute: ConsoleRoute,
   ContactRoute: ContactRoute,
   CorporateDashboardRoute: CorporateDashboardRoute,
+  CurrencyRiskRoute: CurrencyRiskRoute,
   DecksRoute: DecksRoute,
   EvidenceRoute: EvidenceRoute,
   FilingSubmissionRoute: FilingSubmissionRoute,

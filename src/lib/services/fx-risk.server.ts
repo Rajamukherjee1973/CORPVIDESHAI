@@ -40,10 +40,10 @@ export async function readFxRisk(codes: string[]): Promise<FxRiskPayload> {
   const base = { source: FX_RISK_SOURCE, method: FX_RISK_METHOD, fetchedAt };
   try {
     const snaps = await loadSnapshots();
-    const { vols, missing } = measureFromSnapshots(codes, snaps);
+    const { vols, series, missing } = measureFromSnapshots(codes, snaps);
     const asOf = snaps.reduce<string | null>((m, s) => (m === null || s.date > m ? s.date : m), null);
-    return { ...base, vols, missing, asOf, error: Object.keys(vols).length === 0 ? "Measured exchange-rate history is unavailable right now." : null };
+    return { ...base, vols, series, missing, asOf, error: Object.keys(vols).length === 0 ? "Measured exchange-rate history is unavailable right now." : null };
   } catch {
-    return { ...base, vols: {}, missing: codes, asOf: null, error: "Measured exchange-rate history is unavailable right now." };
+    return { ...base, vols: {}, series: {}, missing: codes, asOf: null, error: "Measured exchange-rate history is unavailable right now." };
   }
 }

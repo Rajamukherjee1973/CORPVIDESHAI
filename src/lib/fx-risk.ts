@@ -24,6 +24,8 @@ export type MeasuredVol = {
 
 export type FxRiskPayload = {
   vols: Record<string, MeasuredVol>;
+  /** Weekly INR-per-unit observations behind each measured figure, oldest first. */
+  series: Record<string, RatePoint[]>;
   /** Requested currencies the source could not measure; they are never estimated here. */
   missing: string[];
   source: string;
@@ -70,8 +72,9 @@ export function realisedVol(code: string, points: RatePoint[], periodsPerYear = 
 export function measureFromSnapshots(
   codes: string[],
   snapshots: { date: string; perInr: Record<string, number> }[],
-): { vols: Record<string, MeasuredVol>; missing: string[] } {
+): { vols: Record<string, MeasuredVol>; series: Record<string, RatePoint[]>; missing: string[] } {
   const vols: Record<string, MeasuredVol> = {};
+  const series: Record<string, RatePoint[]> = {};
   const missing: string[] = [];
   for (const code of codes) {
     const points: RatePoint[] = [];
@@ -80,8 +83,10 @@ export function measureFromSnapshots(
       if (typeof v === "number" && v > 0) points.push({ date: s.date, inrPer: 1 / v });
     }
     const m = realisedVol(code, points);
-    if (m) vols[code] = m;
-    else missing.push(code);
+    if (m) {
+      vols[code] = m;
+      series[code] = points.sort((a, b) => a.date.localeCompare(b.date));
+    } else missing.push(code);
   }
-  return { vols, missing };
+  return { vols, series, missing };
 }

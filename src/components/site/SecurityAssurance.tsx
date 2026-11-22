@@ -1,15 +1,8 @@
-const INDEX = [
-  { id: "rail", n: "01", h: "Federated rail", d: "One filing, six lanes in parallel" },
-  { id: "breach", n: "02", h: "Breach theatre", d: "Four 3D attack-and-defence drills" },
-  { id: "design", n: "03", h: "Design rationale", d: "Why one breach changes nothing" },
-  { id: "controls", n: "04", h: "Control map", d: "Safeguard → reference framework" },
-];
-
 const POSTURE = [
   { k: "8", l: "Ledger nodes", s: "Hash-chained, quorum write" },
   { k: "6", l: "Regulator lanes", s: "Least-sight field scoping" },
   { k: "4", l: "Threat drills", s: "Detect · contain · recover" },
-  { k: "0", l: "Live systems touched", s: "Local scripted simulation" },
+  { k: "3", l: "Live self-checks", s: "Read-only, run from your browser" },
 ];
 
 const CONTROLS = [
@@ -45,15 +38,6 @@ export function SecurityAssuranceHeader() {
         ))}
       </div>
 
-      <nav aria-label="Security page sections" className="mt-8 grid gap-px border border-rule/20 bg-rule/15 sm:grid-cols-2 lg:grid-cols-4">
-        {INDEX.map((i) => (
-          <a key={i.id} href={`#${i.id}`} className="group bg-background px-5 py-4 transition-colors hover:bg-primary hover:text-primary-foreground">
-            <span className="font-mono-ui text-[10px] tracking-[0.18em] text-primary group-hover:text-primary-foreground">{i.n}</span>
-            <p className="mt-1 font-display text-xl leading-tight">{i.h}</p>
-            <p className="mt-1 text-xs text-muted-foreground group-hover:text-primary-foreground/80">{i.d}</p>
-          </a>
-        ))}
-      </nav>
     </header>
   );
 }

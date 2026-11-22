@@ -17,6 +17,8 @@ export type FxStatus = "loading" | "live" | "indicative";
 export type FxTape = {
   /** INR per 1 unit of currency, mid. */
   inrPer: Record<string, number>;
+  /** The feed's own print at the last anchor (no micro-walk), INR per unit. */
+  anchorInrPer: Record<string, number>;
   /** Previous print, for tick direction. */
   prev: Record<string, number>;
   /** Monotonic tick sequence — increments on every micro-print. */
@@ -45,6 +47,7 @@ function baseTape(): FxTape {
   }
   return {
     inrPer,
+    anchorInrPer: {},
     prev: inrPer,
     seq: 0,
     anchor: "",
@@ -106,8 +109,13 @@ async function pullAnchor() {
     }
     inrPer["INR"] = 1;
     anchorRates = inrPer;
+    const fed: Record<string, number> = { INR: 1 };
+    for (const [code, perUsd] of Object.entries(d.rates)) {
+      if (typeof perUsd === "number" && perUsd > 0) fed[code] = usd / perUsd;
+    }
     tape = {
       ...tape,
+      anchorInrPer: fed,
       prev: tape.inrPer,
       inrPer,
       seq: tape.seq + 1,
